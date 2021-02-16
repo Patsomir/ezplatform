@@ -2,6 +2,7 @@ use std::time::Duration;
 
 use ggez::mint::{Point2, Vector2};
 
+pub const ZERO_VECTOR: Vector2<f32> = Vector2 { x: 0.0, y: 0.0 };
 pub struct PhysicsObject {
     pub position: Point2<f32>,
     pub velocity: Vector2<f32>,
@@ -14,8 +15,8 @@ impl PhysicsObject {
         PhysicsObject {
             position,
             mass,
-            velocity: Vector2 { x: 0.0, y: 0.0 },
-            force: Vector2 { x: 0.0, y: 0.0 },
+            velocity: ZERO_VECTOR,
+            force: ZERO_VECTOR,
         }
     }
 

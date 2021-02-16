@@ -1,13 +1,17 @@
-use ggez::graphics::{Color, Rect};
 use ggez::timer;
 use ggez::{
     event::{self, EventHandler},
     mint::Point2,
 };
+use ggez::{
+    event::{KeyCode, KeyMods},
+    graphics::{Color, Rect},
+};
 use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{Context, ContextBuilder, GameResult};
 use graphics::{DrawParam, Mesh};
 
+use ezplatform::movement::MovementController;
 use ezplatform::physics::PhysicsObject;
 use ezplatform::world::World;
 
@@ -31,63 +35,87 @@ fn main() {
     }
 }
 
-const MASS: f32 = 1.0;
+const MASS: f32 = 5.0;
 const SIZE: f32 = 2.0;
-const FORCE: f32 = 1.0;
+const MOVE_FORCE: f32 = 6.0;
+const JUMP_IMPULSE: f32 = 0.5;
+const MAX_SPEED: f32 = 4.0;
+const MOVE_SPEED_DECAY: f32 = 3.0;
+const GRAVITY_ACCELERATION: f32 = 2.0;
+
 const ZERO_POINT: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
 
 struct MyGame {
     world: World,
     total_time: std::time::Duration,
 
-    player: PhysicsObject,
+    controller: MovementController,
+    can_jump: bool,
 }
 
 impl MyGame {
     pub fn new(ctx: &mut Context, world: World) -> MyGame {
+        let body = PhysicsObject::new(ZERO_POINT, MASS);
+        let controller = MovementController::from_components(
+            body,
+            MOVE_FORCE,
+            JUMP_IMPULSE,
+            MAX_SPEED,
+            MOVE_SPEED_DECAY,
+            GRAVITY_ACCELERATION,
+        );
+
         MyGame {
             world,
             total_time: std::time::Duration::new(0, 0),
-            player: PhysicsObject::new(ZERO_POINT, MASS),
+            controller,
+            can_jump: false,
         }
     }
 }
 
 impl EventHandler for MyGame {
+    fn key_down_event(
+        &mut self,
+        ctx: &mut Context,
+        keycode: KeyCode,
+        _keymods: KeyMods,
+        _repeat: bool,
+    ) {
+        if self.can_jump && keycode == KeyCode::W {
+            self.controller.jump();
+            self.can_jump = false;
+        }
+    }
+
     fn update(&mut self, ctx: &mut Context) -> GameResult<()> {
         let deltatime = timer::delta(ctx);
         self.total_time += deltatime;
-        let mut force: Vector2<_> = ZERO_POINT.into();
         if keyboard::is_key_pressed(ctx, keyboard::KeyCode::A) {
-            force.x = -FORCE;
+            self.controller.move_left();
+        } else if keyboard::is_key_pressed(ctx, keyboard::KeyCode::D) {
+            self.controller.move_right();
+        } else {
+            self.controller.stop();
         }
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::D) {
-            force.x = FORCE;
-        }
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::W) {
-            force.y = FORCE;
-        }
-        if keyboard::is_key_pressed(ctx, keyboard::KeyCode::S) {
-            force.y = -FORCE;
-        }
-        self.player.set_force(force);
-        self.player.update(deltatime);
+        self.controller.update(deltatime);
 
-        if self.player.position.x > DISTANCE {
-            self.player.velocity.x = 0.0;
-            self.player.position.x = DISTANCE;
+        if self.controller.body.position.x < -DISTANCE * 1.5 {
+            self.controller.body.velocity.x = 0.0;
+            self.controller.body.position.x = -DISTANCE * 1.5;
         }
-        if self.player.position.x < -DISTANCE {
-            self.player.velocity.x = 0.0;
-            self.player.position.x = -DISTANCE;
+        if self.controller.body.position.x > DISTANCE * 1.5 {
+            self.controller.body.velocity.x = 0.0;
+            self.controller.body.position.x = DISTANCE * 1.5;
         }
-        if self.player.position.y < -DISTANCE {
-            self.player.velocity.y = 0.0;
-            self.player.position.y = -DISTANCE;
-        }
-        if self.player.position.y > DISTANCE {
-            self.player.velocity.y = 0.0;
-            self.player.position.y = DISTANCE;
+
+        // let camera_pos = self.world.camera_position();
+        // self.world.look_at(Point2 { x: camera_pos.x + (self.controller.body.position.x - camera_pos.x) * deltatime.as_secs_f32() * 10.0, y: camera_pos.y });
+
+        if self.controller.body.position.y < -DISTANCE + 2.0 {
+            self.controller.body.velocity.y = 0.0;
+            self.controller.body.position.y = -DISTANCE + 2.0;
+            self.can_jump = true;
         }
 
         // let time_seconds = self.total_time.as_secs_f32();
@@ -111,8 +139,12 @@ impl EventHandler for MyGame {
 
         draw_rectangle(
             ctx,
-            self.world
-                .new_screen_param(self.player.position.x, self.player.position.y, SIZE, SIZE),
+            self.world.new_screen_param(
+                self.controller.body.position.x,
+                self.controller.body.position.y,
+                SIZE,
+                SIZE,
+            ),
         );
 
         graphics::present(ctx).expect("Failed to present");

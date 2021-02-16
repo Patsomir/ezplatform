@@ -73,4 +73,8 @@ impl World {
                 y: self.screen_height * height / self.height,
             })
     }
+
+    pub fn camera_position(&self) -> Point2<f32> {
+        self.camera_position
+    }
 }
