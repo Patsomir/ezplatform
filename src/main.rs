@@ -11,9 +11,10 @@ use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{Context, ContextBuilder, GameResult};
 use graphics::{DrawParam, Mesh};
 
-use ezplatform::movement::MovementController;
+use ezplatform::{collision::TilemapCollider, movement::MovementController};
 use ezplatform::physics::PhysicsObject;
 use ezplatform::world::World;
+use ezplatform::debug::draw_rect_in_world;
 
 const SCREEN_WIDTH: f32 = 1200.0;
 const SCREEN_HEIGHT: f32 = 600.0;
@@ -26,7 +27,7 @@ fn main() {
         .build()
         .unwrap();
 
-    let mut world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
+    let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
     let mut my_game = MyGame::new(&mut ctx, world);
 
     match event::run(&mut ctx, &mut event_loop, &mut my_game) {
@@ -37,18 +38,36 @@ fn main() {
 
 const MASS: f32 = 5.0;
 const SIZE: f32 = 2.0;
-const MOVE_FORCE: f32 = 6.0;
+const MOVE_FORCE: f32 = 8.0;
 const JUMP_IMPULSE: f32 = 0.5;
-const MAX_SPEED: f32 = 4.0;
-const MOVE_SPEED_DECAY: f32 = 3.0;
+const MAX_SPEED: f32 = 0.5;
+const MOVE_SPEED_DECAY: f32 = 6.0;
 const GRAVITY_ACCELERATION: f32 = 2.0;
 
 const ZERO_POINT: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
+
+const O: bool = true;
+const X: bool = false;
+const COLLIDER_TEMPLATE: &[&[bool]] = &[
+    &[X, X, X, O, X, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, X, O, O, O, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, O, O, O, O, O, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, X, X],
+    &[X, X, X, X, X, X, X, X, O, O],
+    &[O, O, X, X, X, X, X, X, X, X],
+    &[X, X, X, O, O, O, O, X, X, X],
+];
 
 struct MyGame {
     world: World,
     total_time: std::time::Duration,
 
+    tilemap_collider: TilemapCollider,
     controller: MovementController,
     can_jump: bool,
 }
@@ -64,12 +83,19 @@ impl MyGame {
             MOVE_SPEED_DECAY,
             GRAVITY_ACCELERATION,
         );
+        let tilemap_collider = TilemapCollider::from_components(
+            COLLIDER_TEMPLATE,
+            5.0,
+            1.5,
+            Point2 { x: 5, y: 5 }
+        );
 
         MyGame {
             world,
             total_time: std::time::Duration::new(0, 0),
             controller,
             can_jump: false,
+            tilemap_collider,
         }
     }
 }
@@ -100,22 +126,43 @@ impl EventHandler for MyGame {
         }
         self.controller.update(deltatime);
 
-        if self.controller.body.position.x < -DISTANCE * 1.5 {
-            self.controller.body.velocity.x = 0.0;
-            self.controller.body.position.x = -DISTANCE * 1.5;
+        let player_rect = Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE);
+        let collisions = self.tilemap_collider.get_collisions(player_rect);
+        if collisions.len() != 0 && self.controller.body.velocity.y < 0.0 {
+            let max_rect = collisions.iter().fold(collisions[0], |a, b| {
+                if a.y < b.y {
+                    return *b;
+                }
+                a
+            });
+            if self.controller.body.position.y > max_rect.y {
+                self.controller.body.position.y = max_rect.y + max_rect.h / 2.0 + SIZE / 2.0;
+                self.controller.body.velocity.y = 0.0;
+                self.can_jump = true;
+            }
         }
-        if self.controller.body.position.x > DISTANCE * 1.5 {
-            self.controller.body.velocity.x = 0.0;
-            self.controller.body.position.x = DISTANCE * 1.5;
-        }
+        
+
+        // if self.controller.body.position.x < -DISTANCE * 1.5 {
+        //     self.controller.body.velocity.x = 0.0;
+        //     self.controller.body.position.x = -DISTANCE * 1.5;
+        // }
+        // if self.controller.body.position.x > DISTANCE * 1.5 {
+        //     self.controller.body.velocity.x = 0.0;
+        //     self.controller.body.position.x = DISTANCE * 1.5;
+        // }
 
         // let camera_pos = self.world.camera_position();
         // self.world.look_at(Point2 { x: camera_pos.x + (self.controller.body.position.x - camera_pos.x) * deltatime.as_secs_f32() * 10.0, y: camera_pos.y });
 
-        if self.controller.body.position.y < -DISTANCE + 2.0 {
-            self.controller.body.velocity.y = 0.0;
-            self.controller.body.position.y = -DISTANCE + 2.0;
-            self.can_jump = true;
+        if self.controller.body.position.y < -DISTANCE - 2.0 {
+            self.controller.body.position.y = DISTANCE + 2.0;
+        }
+        if self.controller.body.position.x < -DISTANCE * 2.0 - 2.0 {
+            self.controller.body.position.x = DISTANCE * 2.0 + 2.0;
+        }
+        if self.controller.body.position.x > DISTANCE * 2.0 + 2.0 {
+            self.controller.body.position.x = -DISTANCE * 2.0 - 2.0;
         }
 
         // let time_seconds = self.total_time.as_secs_f32();
@@ -137,32 +184,10 @@ impl EventHandler for MyGame {
         // draw_rectangle(ctx, self.world.new_screen_param(-1.0, 0.0, 1.0, 2.0));
         // draw_rectangle(ctx, self.world.new_screen_param(0.0, 0.0, 1.5, 1.5).color(RED).rotation(-5.0 * self.total_time.as_secs_f32()));
 
-        draw_rectangle(
-            ctx,
-            self.world.new_screen_param(
-                self.controller.body.position.x,
-                self.controller.body.position.y,
-                SIZE,
-                SIZE,
-            ),
-        );
+        draw_rect_in_world(ctx, Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE), graphics::WHITE, &self.world);
+        self.tilemap_collider.draw_in_world(ctx, RED, &self.world);
 
         graphics::present(ctx).expect("Failed to present");
         Ok(())
     }
-}
-
-fn draw_rectangle(ctx: &mut Context, param: DrawParam) {
-    let rect = canonical_rect_mesh(ctx);
-    graphics::draw(ctx, &rect, param).unwrap();
-}
-
-fn canonical_rect_mesh(ctx: &mut Context) -> Mesh {
-    graphics::Mesh::new_rectangle(
-        ctx,
-        graphics::DrawMode::fill(),
-        Rect::new(0., 0., 1.0, 1.0),
-        graphics::WHITE,
-    )
-    .unwrap()
 }
