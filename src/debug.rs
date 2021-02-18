@@ -1,4 +1,8 @@
-use ggez::{Context, graphics::{self, Color, DrawParam, Mesh, Rect}, mint::Point2};
+use ggez::{
+    graphics::{self, Color, DrawParam, Mesh, Rect},
+    mint::Point2,
+    Context,
+};
 
 use crate::{collision::TilemapCollider, world::World};
 
@@ -10,7 +14,10 @@ impl TilemapCollider {
                 if tiles[row][col] {
                     let w = self.tile_width();
                     let h = self.tile_height();
-                    let Point2 { x, y } = self.tilemap_to_world(Point2 { x: col as f32, y: row as f32 });
+                    let Point2 { x, y } = self.tilemap_to_world(Point2 {
+                        x: col as f32,
+                        y: row as f32,
+                    });
                     draw_rect_in_world(ctx, Rect::new(x, y, w, h), color, world);
                 }
             }
@@ -21,12 +28,9 @@ impl TilemapCollider {
 pub fn draw_rect_in_world(ctx: &mut Context, rect: Rect, color: Color, world: &World) {
     draw_rectangle(
         ctx,
-        world.new_screen_param(
-            rect.x,
-            rect.y,
-            rect.w,
-            rect.h,
-        ).color(color),
+        world
+            .new_screen_param(rect.x, rect.y, rect.w, rect.h)
+            .color(color),
     );
 }
 

@@ -1,4 +1,3 @@
-use ggez::timer;
 use ggez::{
     event::{self, EventHandler},
     mint::Point2,
@@ -7,14 +6,21 @@ use ggez::{
     event::{KeyCode, KeyMods},
     graphics::{Color, Rect},
 };
+use ggez::{
+    filesystem::resources_dir,
+    graphics::{spritebatch::SpriteBatch, Image},
+    timer,
+};
 use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{Context, ContextBuilder, GameResult};
-use graphics::{DrawParam, Mesh};
+use graphics::{DrawParam, Drawable, Mesh};
 
-use ezplatform::{collision::TilemapCollider, movement::MovementController};
-use ezplatform::physics::PhysicsObject;
 use ezplatform::world::World;
-use ezplatform::debug::draw_rect_in_world;
+use ezplatform::{animation::SpriteSheetAnimation, physics::PhysicsObject};
+use ezplatform::{
+    collision::TilemapCollider, movement::MovementController, rendering::WorldDrawable,
+};
+use ezplatform::{debug::draw_rect_in_world, rendering::SpriteSheet};
 
 const SCREEN_WIDTH: f32 = 1200.0;
 const SCREEN_HEIGHT: f32 = 600.0;
@@ -38,10 +44,10 @@ fn main() {
 
 const MASS: f32 = 5.0;
 const SIZE: f32 = 2.0;
-const MOVE_FORCE: f32 = 8.0;
+const MOVE_FORCE: f32 = 6.0;
 const JUMP_IMPULSE: f32 = 0.5;
-const MAX_SPEED: f32 = 0.5;
-const MOVE_SPEED_DECAY: f32 = 6.0;
+const MAX_SPEED: f32 = 0.25;
+const MOVE_SPEED_DECAY: f32 = 1.8;
 const GRAVITY_ACCELERATION: f32 = 2.0;
 
 const ZERO_POINT: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
@@ -70,6 +76,10 @@ struct MyGame {
     tilemap_collider: TilemapCollider,
     controller: MovementController,
     can_jump: bool,
+
+    image: Image,
+    orientation: i8,
+    walking_animation: SpriteSheetAnimation,
 }
 
 impl MyGame {
@@ -83,12 +93,12 @@ impl MyGame {
             MOVE_SPEED_DECAY,
             GRAVITY_ACCELERATION,
         );
-        let tilemap_collider = TilemapCollider::from_components(
-            COLLIDER_TEMPLATE,
-            5.0,
-            1.5,
-            Point2 { x: 5, y: 5 }
-        );
+        let tilemap_collider =
+            TilemapCollider::from_components(COLLIDER_TEMPLATE, 5.0, 1.5, Point2 { x: 5, y: 5 });
+        let image = Image::new(ctx, "/placeholder.png").unwrap();
+        let walking_image = Image::new(ctx, "/walking.png").unwrap();
+        let walking_sprites = SpriteSheet::new(walking_image, 3, 2, 6);
+        let walking_animation = SpriteSheetAnimation::new(walking_sprites, 30.0);
 
         MyGame {
             world,
@@ -96,6 +106,10 @@ impl MyGame {
             controller,
             can_jump: false,
             tilemap_collider,
+            image,
+            orientation: 1,
+
+            walking_animation,
         }
     }
 }
@@ -119,14 +133,21 @@ impl EventHandler for MyGame {
         self.total_time += deltatime;
         if keyboard::is_key_pressed(ctx, keyboard::KeyCode::A) {
             self.controller.move_left();
+            self.orientation = -1;
         } else if keyboard::is_key_pressed(ctx, keyboard::KeyCode::D) {
             self.controller.move_right();
+            self.orientation = 1;
         } else {
             self.controller.stop();
         }
         self.controller.update(deltatime);
 
-        let player_rect = Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE);
+        let player_rect = Rect::new(
+            self.controller.body.position.x,
+            self.controller.body.position.y,
+            SIZE,
+            SIZE,
+        );
         let collisions = self.tilemap_collider.get_collisions(player_rect);
         if collisions.len() != 0 && self.controller.body.velocity.y < 0.0 {
             let max_rect = collisions.iter().fold(collisions[0], |a, b| {
@@ -141,7 +162,6 @@ impl EventHandler for MyGame {
                 self.can_jump = true;
             }
         }
-        
 
         // if self.controller.body.position.x < -DISTANCE * 1.5 {
         //     self.controller.body.velocity.x = 0.0;
@@ -165,6 +185,8 @@ impl EventHandler for MyGame {
             self.controller.body.position.x = -DISTANCE * 2.0 - 2.0;
         }
 
+        self.walking_animation.update(deltatime);
+
         // let time_seconds = self.total_time.as_secs_f32();
         // let speed = 4.0;
         // let radius = 5.0;
@@ -184,8 +206,39 @@ impl EventHandler for MyGame {
         // draw_rectangle(ctx, self.world.new_screen_param(-1.0, 0.0, 1.0, 2.0));
         // draw_rectangle(ctx, self.world.new_screen_param(0.0, 0.0, 1.5, 1.5).color(RED).rotation(-5.0 * self.total_time.as_secs_f32()));
 
-        draw_rect_in_world(ctx, Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE), graphics::WHITE, &self.world);
+        //draw_rect_in_world(ctx, Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE), graphics::WHITE, &self.world);
         self.tilemap_collider.draw_in_world(ctx, RED, &self.world);
+
+
+        if self.controller.body.velocity.x.abs() > 0.05 {
+            self.walking_animation
+            .get_drawable()
+            .draw_in_world(
+                ctx,
+                &self.world,
+                Rect::new(
+                    self.controller.body.position.x,
+                    self.controller.body.position.y,
+                    self.orientation as f32 * SIZE,
+                    SIZE,
+                ),
+            )
+            .unwrap();
+        } else {
+            self.image
+            .draw_in_world(
+                ctx,
+                &self.world,
+                Rect::new(
+                    self.controller.body.position.x,
+                    self.controller.body.position.y,
+                    self.orientation as f32 * SIZE,
+                    SIZE,
+                ),
+            )
+            .unwrap();
+        }
+        
 
         graphics::present(ctx).expect("Failed to present");
         Ok(())

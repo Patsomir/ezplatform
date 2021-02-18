@@ -4,11 +4,16 @@ pub struct TilemapCollider {
     tile_width: f32,
     tile_height: f32,
     tiles: Vec<Vec<bool>>,
-    origin: Point2<i32>
+    origin: Point2<i32>,
 }
 
 impl TilemapCollider {
-    pub fn from_components(template: &[&[bool]], tile_width: f32, tile_height: f32, origin: Point2<i32>) -> Self {
+    pub fn from_components(
+        template: &[&[bool]],
+        tile_width: f32,
+        tile_height: f32,
+        origin: Point2<i32>,
+    ) -> Self {
         let tiles: Vec<Vec<bool>> = template.iter().map(|arr| Vec::from(*arr)).rev().collect();
         TilemapCollider {
             tile_width,
@@ -58,7 +63,10 @@ impl TilemapCollider {
                     if let Some(row_vec) = self.tiles.get(row as usize) {
                         if let Some(tile) = row_vec.get(col as usize) {
                             if *tile {
-                                let Point2 { x, y } = self.tilemap_to_world(Point2 { x: col as f32, y: row as f32});
+                                let Point2 { x, y } = self.tilemap_to_world(Point2 {
+                                    x: col as f32,
+                                    y: row as f32,
+                                });
                                 result.push(Rect::new(x, y, self.tile_width, self.tile_height));
                             }
                         }

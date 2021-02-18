@@ -1,5 +1,5 @@
 use ggez::{
-    graphics::DrawParam,
+    graphics::{DrawParam, Rect},
     mint::{Point2, Vector2},
 };
 
@@ -52,6 +52,16 @@ impl World {
             x: (0.5 + (position.x - self.camera_position.x) / self.width) * self.screen_width,
             y: (0.5 - (position.y - self.camera_position.y) / self.height) * self.screen_height,
         }
+    }
+
+    pub fn world_to_screen_rect(&self, rect: Rect) -> Rect {
+        let new_pos = self.world_to_screen_pos(rect.point());
+        Rect::new(
+            new_pos.x,
+            new_pos.y,
+            self.screen_width * rect.w / self.width,
+            self.screen_height * rect.h / self.height,
+        )
     }
 
     pub fn world_to_screen_param(&self, param: DrawParam) -> DrawParam {
