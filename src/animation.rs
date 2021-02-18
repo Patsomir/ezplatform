@@ -1,7 +1,5 @@
 use std::time::Duration;
 
-use ggez::graphics::Drawable;
-
 use crate::rendering::SpriteSheet;
 
 pub struct SpriteSheetAnimation {
@@ -113,22 +111,32 @@ impl<T: Clone> StateMachine<T> {
 
 pub struct SpriteAnimator<T> {
     animations: Vec<SpriteSheetAnimation>,
-    pub state_machine: StateMachine<T>
+    state_machine: StateMachine<T>,
 }
 
 impl<T: Clone> SpriteAnimator<T> {
     pub fn from_animations(animations: Vec<SpriteSheetAnimation>) -> Self {
         Self {
             state_machine: StateMachine::<T>::new(animations.len()),
-            animations
+            animations,
         }
     }
 
-    pub fn get_animation(&self) -> &SpriteSheetAnimation {
-        &self.animations[self.state_machine.current_state]
+    pub fn update(&mut self, monitor: T, deltatime: Duration) {
+        self.animations[self.state_machine.state()].update(deltatime);
+        if self.state_machine.update_once(monitor) {
+            self.animations[self.state_machine.state()].reset();
+        }
     }
 
-    pub fn get_animation_mut(&mut self) -> &mut SpriteSheetAnimation {
-        &mut self.animations[self.state_machine.current_state]
+    pub fn add_rule<F>(&mut self, from: usize, to: usize, callback: F)
+    where
+        F: Fn(T) -> bool + 'static,
+    {
+        self.state_machine.add_rule(from, to, callback);
+    }
+
+    pub fn get_drawable(&self) -> &SpriteSheet {
+        self.animations[self.state_machine.state()].get_drawable()
     }
 }
