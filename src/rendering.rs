@@ -110,3 +110,7 @@ impl Drawable for SpriteSheet {
         self.spritesheet.blend_mode()
     }
 }
+
+struct TilemapRenderer {
+    
+}

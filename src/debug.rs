@@ -4,7 +4,7 @@ use ggez::{
     Context,
 };
 
-use crate::{collision::TilemapCollider, world::World};
+use crate::{collision::TilemapCollider, tilemap::Tilemap, world::World};
 
 impl TilemapCollider {
     pub fn draw_in_world(&self, ctx: &mut Context, color: Color, world: &World) {

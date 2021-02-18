@@ -5,3 +5,4 @@ pub mod movement;
 pub mod physics;
 pub mod rendering;
 pub mod world;
+pub mod tilemap;

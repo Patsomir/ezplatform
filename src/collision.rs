@@ -1,10 +1,25 @@
 use ggez::{graphics::Rect, mint::Point2};
+use crate::tilemap::Tilemap;
 
 pub struct TilemapCollider {
     tile_width: f32,
     tile_height: f32,
     tiles: Vec<Vec<bool>>,
     origin: Point2<i32>,
+}
+
+impl Tilemap for TilemapCollider {
+    fn origin(&self) -> Point2<i32> {
+        self.origin
+    }
+
+    fn tile_width(&self) -> f32 {
+        self.tile_width
+    }
+
+    fn tile_height(&self) -> f32 {
+        self.tile_height
+    }
 }
 
 impl TilemapCollider {
@@ -29,20 +44,6 @@ impl TilemapCollider {
 
     pub fn set_origin(&mut self, origin: Point2<i32>) {
         self.origin = origin;
-    }
-
-    pub fn tilemap_to_world(&self, point: Point2<f32>) -> Point2<f32> {
-        Point2 {
-            x: (point.x - self.origin.x as f32) * self.tile_width,
-            y: (point.y - self.origin.y as f32) * self.tile_height,
-        }
-    }
-
-    pub fn world_to_tilemap(&self, point: Point2<f32>) -> Point2<f32> {
-        Point2 {
-            x: point.x / self.tile_width + self.origin.x as f32,
-            y: point.y / self.tile_height + self.origin.y as f32,
-        }
     }
 
     pub fn get_collisions(&self, rect: Rect) -> Vec<Rect> {
@@ -79,17 +80,5 @@ impl TilemapCollider {
 
     pub fn tiles_ref(&self) -> &Vec<Vec<bool>> {
         &self.tiles
-    }
-
-    pub fn origin(&self) -> Point2<i32> {
-        self.origin
-    }
-
-    pub fn tile_width(&self) -> f32 {
-        self.tile_width
-    }
-
-    pub fn tile_height(&self) -> f32 {
-        self.tile_height
     }
 }

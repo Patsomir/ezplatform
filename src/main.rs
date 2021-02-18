@@ -99,14 +99,29 @@ impl MyGame {
         let idle_sprites = SpriteSheet::new(idle_image, 1, 1, 1);
         let idle_animation = SpriteSheetAnimation::new(idle_sprites, 1.0);
 
+        let jump_image = Image::new(ctx, "/jump.png").unwrap();
+        let jump_sprites = SpriteSheet::new(jump_image, 1, 1, 1);
+        let jump_animation = SpriteSheetAnimation::new(jump_sprites, 1.0);
+
+        let fall_image = Image::new(ctx, "/fall.png").unwrap();
+        let fall_sprites = SpriteSheet::new(fall_image, 1, 1, 1);
+        let fall_animation = SpriteSheetAnimation::new(fall_sprites, 1.0);
+
         let walking_image = Image::new(ctx, "/walking.png").unwrap();
         let walking_sprites = SpriteSheet::new(walking_image, 3, 2, 6);
         let walking_animation = SpriteSheetAnimation::new(walking_sprites, 30.0);
 
         let mut player_animator: SpriteAnimator<Vector2<f32>> =
-            SpriteAnimator::from_animations(vec![idle_animation, walking_animation]);
+            SpriteAnimator::from_animations(vec![idle_animation, walking_animation, jump_animation, fall_animation]);
         player_animator.add_rule(0, 1, |velocity| velocity.x.abs() > 0.1);
         player_animator.add_rule(1, 0, |velocity| velocity.x.abs() < 0.1);
+        player_animator.add_rule(0, 2, |velocity| velocity.y > 0.1);
+        player_animator.add_rule(1, 2, |velocity| velocity.y > 0.1);
+        player_animator.add_rule(0, 2, |velocity| velocity.y < -0.1);
+        player_animator.add_rule(1, 2, |velocity| velocity.y < -0.1);
+        player_animator.add_rule(2, 3, |velocity| velocity.y <= 0.0);
+        player_animator.add_rule(3, 0, |velocity| velocity.y >= 0.0);
+
 
         MyGame {
             world,
