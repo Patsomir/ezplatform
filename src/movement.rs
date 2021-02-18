@@ -48,7 +48,7 @@ impl MovementController {
     }
 
     pub fn jump(&mut self) {
-        self.body.velocity.y = self.jump_impulse;
+        self.body.set_velocity(Vector2 { x: 0.0, y: self.jump_impulse });
     }
 
     pub fn update(&mut self, deltatime: Duration) {

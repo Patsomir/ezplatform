@@ -27,6 +27,14 @@ impl PhysicsObject {
         }
     }
 
+    pub fn velocity(&self) -> Vector2<f32> {
+        self.velocity
+    }
+
+    pub fn position(&self) -> Point2<f32> {
+        self.position
+    }
+
     pub fn apply_force(&mut self, force: Vector2<f32>) {
         self.force.x += force.x;
         self.force.y += force.y;
@@ -34,6 +42,24 @@ impl PhysicsObject {
 
     pub fn set_force(&mut self, force: Vector2<f32>) {
         self.force = force;
+    }
+
+    pub fn apply_velocity(&mut self, velocity: Vector2<f32>) {
+        self.velocity.x += velocity.x;
+        self.velocity.y += velocity.y;
+    }
+
+    pub fn set_velocity(&mut self, velocity: Vector2<f32>) {
+        self.velocity = velocity;
+    }
+
+    pub fn translate(&mut self, direction: Vector2<f32>) {
+        self.position.x += direction.x;
+        self.position.y += direction.y;
+    }
+
+    pub fn set_position(&mut self, position: Point2<f32>) {
+        self.position = position;
     }
 
     pub fn update(&mut self, deltatime: Duration) {
