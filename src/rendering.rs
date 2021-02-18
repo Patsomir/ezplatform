@@ -1,8 +1,5 @@
 use ggez::{
-    graphics::{
-        spritebatch::{SpriteBatch, SpriteIdx},
-        DrawParam, Drawable, Image, Rect,
-    },
+    graphics::{DrawParam, Drawable, Image, Rect},
     mint::Point2,
     Context, GameResult,
 };
@@ -47,7 +44,8 @@ impl SpriteSheet {
     pub fn new(spritesheet: Image, rows: u32, cols: u32, total_sprites: u32) -> Self {
         let sprite_width_proportion = 1.0 / cols as f32;
         let sprite_height_proportion = 1.0 / rows as f32;
-        let active_sprite_rect = Rect::new(0.0, 0.0, sprite_width_proportion, sprite_height_proportion);
+        let active_sprite_rect =
+            Rect::new(0.0, 0.0, sprite_width_proportion, sprite_height_proportion);
         SpriteSheet {
             spritesheet,
             rows,
@@ -68,7 +66,7 @@ impl SpriteSheet {
             col_index * self.sprite_width_proportion,
             row_index * self.sprite_height_proportion,
             self.sprite_width_proportion,
-            self.sprite_height_proportion
+            self.sprite_height_proportion,
         );
     }
 
@@ -93,10 +91,11 @@ impl SpriteSheet {
 
 impl Drawable for SpriteSheet {
     fn draw(&self, ctx: &mut Context, param: DrawParam) -> GameResult {
-        self.spritesheet.draw(ctx, param.src(self.active_sprite_rect))
+        self.spritesheet
+            .draw(ctx, param.src(self.active_sprite_rect))
     }
 
-    fn dimensions(&self, ctx: &mut Context) -> Option<Rect> {
+    fn dimensions(&self, _ctx: &mut Context) -> Option<Rect> {
         let mut rect = self.spritesheet.dimensions();
         rect.w /= self.cols as f32;
         rect.h /= self.rows as f32;

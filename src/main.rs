@@ -15,7 +15,7 @@ use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{Context, ContextBuilder, GameResult};
 use graphics::{DrawParam, Drawable, Mesh};
 
-use ezplatform::world::World;
+use ezplatform::{animation::SpriteAnimator, world::World};
 use ezplatform::{animation::SpriteSheetAnimation, physics::PhysicsObject};
 use ezplatform::{
     collision::TilemapCollider, movement::MovementController, rendering::WorldDrawable,
@@ -77,9 +77,8 @@ struct MyGame {
     controller: MovementController,
     can_jump: bool,
 
-    image: Image,
     orientation: i8,
-    walking_animation: SpriteSheetAnimation,
+    player_animator: SpriteAnimator<Vector2<f32>>
 }
 
 impl MyGame {
@@ -95,10 +94,18 @@ impl MyGame {
         );
         let tilemap_collider =
             TilemapCollider::from_components(COLLIDER_TEMPLATE, 5.0, 1.5, Point2 { x: 5, y: 5 });
-        let image = Image::new(ctx, "/placeholder.png").unwrap();
+
+        let idle_image = Image::new(ctx, "/placeholder.png").unwrap();
+        let idle_sprites  = SpriteSheet::new(idle_image, 1, 1, 1);
+        let idle_animation = SpriteSheetAnimation::new(idle_sprites, 1.0);
+
         let walking_image = Image::new(ctx, "/walking.png").unwrap();
         let walking_sprites = SpriteSheet::new(walking_image, 3, 2, 6);
         let walking_animation = SpriteSheetAnimation::new(walking_sprites, 30.0);
+
+        let mut player_animator: SpriteAnimator<Vector2<f32>> = SpriteAnimator::from_animations(vec![idle_animation, walking_animation]);
+        player_animator.state_machine.add_rule(0, 1, |velocity| velocity.x.abs() > 0.1);
+        player_animator.state_machine.add_rule(1, 0, |velocity| velocity.x.abs() < 0.1);
 
         MyGame {
             world,
@@ -106,10 +113,8 @@ impl MyGame {
             controller,
             can_jump: false,
             tilemap_collider,
-            image,
+            player_animator,
             orientation: 1,
-
-            walking_animation,
         }
     }
 }
@@ -185,7 +190,8 @@ impl EventHandler for MyGame {
             self.controller.body.position.x = -DISTANCE * 2.0 - 2.0;
         }
 
-        self.walking_animation.update(deltatime);
+        self.player_animator.get_animation_mut().update(deltatime);
+        self.player_animator.state_machine.update_once(self.controller.body.velocity);
 
         // let time_seconds = self.total_time.as_secs_f32();
         // let speed = 4.0;
@@ -209,36 +215,19 @@ impl EventHandler for MyGame {
         //draw_rect_in_world(ctx, Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE), graphics::WHITE, &self.world);
         self.tilemap_collider.draw_in_world(ctx, RED, &self.world);
 
-
-        if self.controller.body.velocity.x.abs() > 0.05 {
-            self.walking_animation
-            .get_drawable()
-            .draw_in_world(
-                ctx,
-                &self.world,
-                Rect::new(
-                    self.controller.body.position.x,
-                    self.controller.body.position.y,
-                    self.orientation as f32 * SIZE,
-                    SIZE,
-                ),
-            )
-            .unwrap();
-        } else {
-            self.image
-            .draw_in_world(
-                ctx,
-                &self.world,
-                Rect::new(
-                    self.controller.body.position.x,
-                    self.controller.body.position.y,
-                    self.orientation as f32 * SIZE,
-                    SIZE,
-                ),
-            )
-            .unwrap();
-        }
-        
+        self.player_animator.get_animation()
+                .get_drawable()
+                .draw_in_world(
+                    ctx,
+                    &self.world,
+                    Rect::new(
+                        self.controller.body.position.x,
+                        self.controller.body.position.y,
+                        self.orientation as f32 * SIZE,
+                        SIZE,
+                    ),
+                )
+                .unwrap();
 
         graphics::present(ctx).expect("Failed to present");
         Ok(())
