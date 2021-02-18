@@ -1,30 +1,26 @@
 use ggez::{
     event::{self, EventHandler},
+    graphics::FilterMode,
     mint::Point2,
 };
 use ggez::{
     event::{KeyCode, KeyMods},
     graphics::{Color, Rect},
 };
-use ggez::{
-    filesystem::resources_dir,
-    graphics::{spritebatch::SpriteBatch, Image},
-    timer,
-};
 use ggez::{graphics, input::keyboard, mint::Vector2};
+use ggez::{graphics::Image, timer};
 use ggez::{Context, ContextBuilder, GameResult};
-use graphics::{DrawParam, Drawable, Mesh};
 
-use ezplatform::{animation::SpriteAnimator, world::World};
+use ezplatform::rendering::SpriteSheet;
+use ezplatform::{animation::SpriteAnimator, rendering::TilemapRenderer, world::World};
 use ezplatform::{animation::SpriteSheetAnimation, physics::PhysicsObject};
 use ezplatform::{
     collision::TilemapCollider, movement::MovementController, rendering::WorldDrawable,
 };
-use ezplatform::{debug::draw_rect_in_world, rendering::SpriteSheet};
 
 const SCREEN_WIDTH: f32 = 1200.0;
 const SCREEN_HEIGHT: f32 = 600.0;
-const DISTANCE: f32 = 15.0;
+const DISTANCE: f32 = 7.0;
 const RED: Color = Color::new(1.0, 0.0, 0.0, 1.0);
 
 fn main() {
@@ -42,31 +38,29 @@ fn main() {
     }
 }
 
-const MASS: f32 = 5.0;
-const SIZE: f32 = 2.0;
-const MOVE_FORCE: f32 = 6.0;
-const JUMP_IMPULSE: f32 = 0.5;
-const MAX_SPEED: f32 = 0.25;
-const MOVE_SPEED_DECAY: f32 = 1.8;
-const GRAVITY_ACCELERATION: f32 = 2.0;
+const MASS: f32 = 3.0;
+const SIZE: f32 = 1.0;
+const MOVE_FORCE: f32 = 1.2;
+const JUMP_IMPULSE: f32 = 0.15;
+const MAX_SPEED: f32 = 0.08;
+const MOVE_SPEED_DECAY: f32 = 0.9;
+const GRAVITY_ACCELERATION: f32 = 0.5;
 
 const ZERO_POINT: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
 
-const O: bool = true;
-const X: bool = false;
-const COLLIDER_TEMPLATE: &[&[bool]] = &[
-    &[X, X, X, O, X, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, X, O, O, O, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, O, O, O, O, O, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, X, X],
-    &[X, X, X, X, X, X, X, X, O, O],
-    &[O, O, X, X, X, X, X, X, X, X],
-    &[X, X, X, O, O, O, O, X, X, X],
+const GROUND_TEMPLATE: &[&[u32]] = &[
+    &[0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 7, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 7, 3, 3, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8],
+    &[7, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[0, 0, 0, 7, 3, 3, 8, 0, 0, 0, 0, 0, 0, 0],
 ];
 
 struct MyGame {
@@ -79,6 +73,7 @@ struct MyGame {
 
     orientation: i8,
     player_animator: SpriteAnimator<Vector2<f32>>,
+    ground: TilemapRenderer,
 }
 
 impl MyGame {
@@ -92,8 +87,6 @@ impl MyGame {
             MOVE_SPEED_DECAY,
             GRAVITY_ACCELERATION,
         );
-        let tilemap_collider =
-            TilemapCollider::from_components(COLLIDER_TEMPLATE, 5.0, 1.5, Point2 { x: 5, y: 5 });
 
         let idle_image = Image::new(ctx, "/placeholder.png").unwrap();
         let idle_sprites = SpriteSheet::new(idle_image, 1, 1, 1);
@@ -112,16 +105,33 @@ impl MyGame {
         let walking_animation = SpriteSheetAnimation::new(walking_sprites, 30.0);
 
         let mut player_animator: SpriteAnimator<Vector2<f32>> =
-            SpriteAnimator::from_animations(vec![idle_animation, walking_animation, jump_animation, fall_animation]);
-        player_animator.add_rule(0, 1, |velocity| velocity.x.abs() > 0.1);
-        player_animator.add_rule(1, 0, |velocity| velocity.x.abs() < 0.1);
-        player_animator.add_rule(0, 2, |velocity| velocity.y > 0.1);
-        player_animator.add_rule(1, 2, |velocity| velocity.y > 0.1);
-        player_animator.add_rule(0, 2, |velocity| velocity.y < -0.1);
-        player_animator.add_rule(1, 2, |velocity| velocity.y < -0.1);
+            SpriteAnimator::from_animations(vec![
+                idle_animation,
+                walking_animation,
+                jump_animation,
+                fall_animation,
+            ]);
+        player_animator.add_rule(0, 1, |velocity| velocity.x.abs() > 0.01);
+        player_animator.add_rule(1, 0, |velocity| velocity.x.abs() < 0.01);
+        player_animator.add_rule(0, 2, |velocity| velocity.y > 0.01);
+        player_animator.add_rule(1, 2, |velocity| velocity.y > 0.01);
+        player_animator.add_rule(0, 2, |velocity| velocity.y < -0.01);
+        player_animator.add_rule(1, 2, |velocity| velocity.y < -0.01);
         player_animator.add_rule(2, 3, |velocity| velocity.y <= 0.0);
         player_animator.add_rule(3, 0, |velocity| velocity.y >= 0.0);
 
+        let mut ground_image = Image::new(ctx, "/ground.png").unwrap();
+        ground_image.set_filter(FilterMode::Nearest);
+        let ground_sprites = SpriteSheet::new(ground_image, 4, 4, 16);
+        let ground = TilemapRenderer::from_components(
+            ground_sprites,
+            GROUND_TEMPLATE,
+            1.0,
+            1.0,
+            Point2 { x: 5, y: 5 },
+        );
+
+        let tilemap_collider = TilemapCollider::from(&ground);
 
         MyGame {
             world,
@@ -131,6 +141,7 @@ impl MyGame {
             tilemap_collider,
             player_animator,
             orientation: 1,
+            ground,
         }
     }
 }
@@ -220,7 +231,7 @@ impl EventHandler for MyGame {
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
-        graphics::clear(ctx, graphics::BLACK);
+        graphics::clear(ctx, Color::new(0.1, 0.08, 0.05, 1.0));
 
         // draw_rectangle(ctx, self.world.new_screen_param(0.0, -1.0, 2.0, 1.0));
         // draw_rectangle(ctx, self.world.new_screen_param(1.0, 0.0, 1.0, 2.0));
@@ -229,7 +240,10 @@ impl EventHandler for MyGame {
         // draw_rectangle(ctx, self.world.new_screen_param(0.0, 0.0, 1.5, 1.5).color(RED).rotation(-5.0 * self.total_time.as_secs_f32()));
 
         //draw_rect_in_world(ctx, Rect::new(self.controller.body.position.x, self.controller.body.position.y, SIZE, SIZE), graphics::WHITE, &self.world);
-        self.tilemap_collider.draw_in_world(ctx, RED, &self.world);
+        //self.tilemap_collider.draw_in_world(ctx, RED, &self.world);
+        self.ground
+            .draw_in_world(ctx, &self.world, Rect::default())
+            .unwrap();
 
         self.player_animator
             .get_drawable()

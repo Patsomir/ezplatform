@@ -1,10 +1,12 @@
+use std::cell::RefCell;
+
 use ggez::{
     graphics::{DrawParam, Drawable, Image, Rect},
     mint::Point2,
     Context, GameResult,
 };
 
-use crate::world::World;
+use crate::{tilemap::Tilemap, world::World};
 
 pub trait WorldDrawable {
     fn draw_in_world(&self, ctx: &mut Context, world: &World, rect: Rect) -> GameResult;
@@ -111,6 +113,71 @@ impl Drawable for SpriteSheet {
     }
 }
 
-struct TilemapRenderer {
-    
+pub struct TilemapRenderer {
+    origin: Point2<i32>,
+    tile_width: f32,
+    tile_height: f32,
+    tiles: Vec<Vec<u32>>,
+    sprites: RefCell<SpriteSheet>,
+}
+
+impl Tilemap for TilemapRenderer {
+    fn origin(&self) -> Point2<i32> {
+        self.origin
+    }
+
+    fn tile_width(&self) -> f32 {
+        self.tile_width
+    }
+
+    fn tile_height(&self) -> f32 {
+        self.tile_height
+    }
+}
+
+impl TilemapRenderer {
+    pub fn from_components(
+        sprites: SpriteSheet,
+        template: &[&[u32]],
+        tile_width: f32,
+        tile_height: f32,
+        origin: Point2<i32>,
+    ) -> Self {
+        let tiles: Vec<Vec<u32>> = template.iter().map(|arr| Vec::from(*arr)).rev().collect();
+        TilemapRenderer {
+            tile_width,
+            tile_height,
+            tiles,
+            origin,
+            sprites: RefCell::new(sprites),
+        }
+    }
+
+    pub fn tiles(&self) -> &Vec<Vec<u32>> {
+        &self.tiles
+    }
+}
+
+impl WorldDrawable for TilemapRenderer {
+    fn draw_in_world(&self, ctx: &mut Context, world: &World, _rect: Rect) -> GameResult {
+        for row in 0..self.tiles.len() {
+            for col in 0..self.tiles[row].len() {
+                if self.tiles[row][col] == 0 {
+                    continue;
+                }
+                let mut sprite_ref = self.sprites.borrow_mut();
+                sprite_ref.set_active(self.tiles[row][col] - 1);
+                let rect = Rect::new(
+                    (col as i32 - self.origin.x) as f32 * self.tile_width,
+                    (row as i32 - self.origin.y) as f32 * self.tile_height,
+                    self.tile_width,
+                    self.tile_height,
+                );
+                if let Err(err) = sprite_ref.draw_in_world(ctx, world, rect) {
+                    return Err(err);
+                }
+            }
+        }
+        Ok(())
+    }
 }

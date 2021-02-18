@@ -1,5 +1,6 @@
-use ggez::{graphics::Rect, mint::Point2};
+use crate::rendering::TilemapRenderer;
 use crate::tilemap::Tilemap;
+use ggez::{graphics::Rect, mint::Point2};
 
 pub struct TilemapCollider {
     tile_width: f32,
@@ -80,5 +81,21 @@ impl TilemapCollider {
 
     pub fn tiles_ref(&self) -> &Vec<Vec<bool>> {
         &self.tiles
+    }
+}
+
+impl From<&TilemapRenderer> for TilemapCollider {
+    fn from(tilemap: &TilemapRenderer) -> Self {
+        let tiles: Vec<_> = tilemap
+            .tiles()
+            .iter()
+            .map(|row| row.iter().map(|tile| *tile != 0).collect::<Vec<_>>())
+            .collect();
+        Self {
+            tiles,
+            tile_width: tilemap.tile_width(),
+            tile_height: tilemap.tile_height(),
+            origin: tilemap.origin(),
+        }
     }
 }
