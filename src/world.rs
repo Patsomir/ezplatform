@@ -1,6 +1,6 @@
 use ggez::{
-    graphics::{DrawParam, Rect},
-    mint::{Point2, Vector2},
+    graphics::Rect,
+    mint::Point2,
 };
 
 pub struct World {
@@ -62,26 +62,6 @@ impl World {
             self.screen_width * rect.w / self.width,
             self.screen_height * rect.h / self.height,
         )
-    }
-
-    pub fn world_to_screen_param(&self, param: DrawParam) -> DrawParam {
-        param
-            .offset(Vector2 { x: 0.5, y: 0.5 })
-            .dest(self.world_to_screen_pos(param.dest))
-            .scale(Vector2 {
-                x: self.screen_width * param.scale.x / self.width,
-                y: self.screen_height * param.scale.y / self.height,
-            })
-    }
-
-    pub fn new_screen_param(&self, x: f32, y: f32, width: f32, height: f32) -> DrawParam {
-        DrawParam::default()
-            .offset(Point2 { x: 0.5, y: 0.5 })
-            .dest(self.world_to_screen_pos(Point2 { x, y }))
-            .scale(Point2 {
-                x: self.screen_width * width / self.width,
-                y: self.screen_height * height / self.height,
-            })
     }
 
     pub fn camera_position(&self) -> Point2<f32> {

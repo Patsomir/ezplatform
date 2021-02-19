@@ -1,13 +1,9 @@
-use ggez::{
-    graphics::{self, Color, DrawParam, Mesh, Rect},
-    mint::Point2,
-    Context,
-};
+use ggez::{Context, GameResult, graphics::{self, DrawParam, Rect}, mint::Point2};
 
-use crate::{collision::TilemapCollider, tilemap::Tilemap, world::World};
+use crate::{collision::TilemapCollider, rendering::WorldDrawable, tilemap::Tilemap, world::World};
 
-impl TilemapCollider {
-    pub fn draw_in_world(&self, ctx: &mut Context, color: Color, world: &World) {
+impl WorldDrawable for TilemapCollider {
+    fn draw_in_world(&self, ctx: &mut Context, world: &World, _: Rect) -> GameResult {
         let tiles = self.tiles_ref();
         for row in 0..tiles.len() {
             for col in 0..tiles[row].len() {
@@ -18,33 +14,25 @@ impl TilemapCollider {
                         x: col as f32,
                         y: row as f32,
                     });
-                    draw_rect_in_world(ctx, Rect::new(x, y, w, h), color, world);
+                    draw_rect_in_world(ctx, Rect::new(x, y, w, h), world)?
                 }
             }
         }
+        Ok(())
     }
 }
 
-pub fn draw_rect_in_world(ctx: &mut Context, rect: Rect, color: Color, world: &World) {
-    draw_rectangle(
+pub fn draw_rect_in_world(ctx: &mut Context, rect: Rect, world: &World) -> GameResult {
+    let mut rect = rect;
+    rect.translate(Point2 {
+        x: -rect.w / 2.0,
+        y: rect.h / 2.0
+    });
+    let mesh = graphics::Mesh::new_rectangle(
         ctx,
-        world
-            .new_screen_param(rect.x, rect.y, rect.w, rect.h)
-            .color(color),
-    );
-}
-
-pub fn draw_rectangle(ctx: &mut Context, param: DrawParam) {
-    let rect = canonical_rect_mesh(ctx, param.color);
-    graphics::draw(ctx, &rect, param).unwrap();
-}
-
-pub fn canonical_rect_mesh(ctx: &mut Context, color: Color) -> Mesh {
-    graphics::Mesh::new_rectangle(
-        ctx,
-        graphics::DrawMode::fill(),
-        Rect::new(0., 0., 1.0, 1.0),
-        color,
-    )
-    .unwrap()
+        graphics::DrawMode::stroke(1.0),
+        world.world_to_screen_rect(rect),
+        graphics::WHITE,
+    )?;
+    graphics::draw(ctx, &mesh, DrawParam::default())
 }
