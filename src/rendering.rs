@@ -1,12 +1,12 @@
 use std::cell::RefCell;
 
-use ggez::{
-    graphics::{DrawParam, Drawable, Image, Rect},
-    mint::Point2,
-    Context, GameResult,
-};
+use ggez::{Context, GameResult, graphics::{Color, DrawParam, Drawable, Image, Rect}, mint::Point2};
 
 use crate::{tilemap::Tilemap, world::World};
+
+pub const RED: Color = Color::new(1.0, 0.0, 0.0, 1.0);
+pub const GREEN: Color = Color::new(0.0, 1.0, 1.0, 1.0);
+pub const BLUE: Color = Color::new(0.0, 0.0, 1.0, 1.0);
 
 pub trait WorldDrawable {
     fn draw_in_world(&self, ctx: &mut Context, world: &World, rect: Rect) -> GameResult;
