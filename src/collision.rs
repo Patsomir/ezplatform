@@ -53,7 +53,7 @@ impl TilemapCollider {
             right_bound,
             bottom_bound,
             top_bound,
-        } = self.tilemap_overlap(rect);
+        } = self.rect_overlap(rect);
 
         let mut result: Vec<Rect> = Vec::new();
         for row in bottom_bound..(top_bound + 1) {
@@ -127,7 +127,7 @@ impl TilemapCollider {
             right_bound,
             bottom_bound,
             top_bound,
-        } = self.tilemap_overlap(rect);
+        } = self.rect_overlap(rect);
 
         let mut result: Vec<Rect> = Vec::new();
         for row in bottom_bound..(top_bound + 1) {
@@ -138,6 +138,19 @@ impl TilemapCollider {
 
     pub fn tiles_ref(&self) -> &Vec<Vec<bool>> {
         &self.tiles
+    }
+
+    pub fn check_collision(&self, point: Point2<f32>) -> bool {
+        let tile = self.point_overlap(point);
+        if tile.x < 0 || tile.y < 0 {
+            return false;
+        }
+        if let Some(row_vec) = self.tiles.get(tile.y as usize) {
+            if let Some(tile_bool) = row_vec.get(tile.x as usize) {
+                return *tile_bool;
+            }
+        }
+        false
     }
 }
 
@@ -267,5 +280,13 @@ impl DynamicCollider {
         for rect in walls {
             self.resolve_collision(rect);
         }
+    }
+
+    pub fn width(&self) -> f32 {
+        self.width
+    }
+
+    pub fn height(&self) -> f32 {
+        self.height
     }
 }

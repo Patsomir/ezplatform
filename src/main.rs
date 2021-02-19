@@ -78,7 +78,7 @@ struct MyGame {
 
 impl MyGame {
     pub fn new(ctx: &mut Context, world: World) -> MyGame {
-        let body = DynamicCollider::from_rect(Rect::new(ZERO_POINT.x, ZERO_POINT.y, SIZE, SIZE), MASS);
+        let body = DynamicCollider::from_rect(Rect::new(ZERO_POINT.x, ZERO_POINT.y, 0.9 * SIZE, SIZE), MASS);
         let controller = MovementController::from_components(
             body,
             MOVE_FORCE,
@@ -86,6 +86,7 @@ impl MyGame {
             MAX_SPEED,
             MOVE_SPEED_DECAY,
             GRAVITY_ACCELERATION,
+            &[Vector2 { x: -1.0, y: -1.2 }, Vector2 { x: 1.0, y: -1.2 }],
         );
 
         let idle_image = Image::new(ctx, "/placeholder.png").unwrap();
@@ -175,8 +176,8 @@ impl EventHandler for MyGame {
         self.controller.update(deltatime);
 
         let player_rect = Rect::new(
-            self.controller.body.position().x,
-            self.controller.body.position().y,
+            self.controller.collider().position().x,
+            self.controller.collider().position().y,
             SIZE,
             SIZE,
         );
@@ -194,8 +195,14 @@ impl EventHandler for MyGame {
         //         self.can_jump = true;
         //     }
         // }
-        self.controller.body.resolve_collisions(&collisions);
-        self.can_jump = true;
+        self.controller.collider_mut().resolve_collisions(&collisions);
+        self.can_jump = false;
+        for point in self.controller.ground_check_points().iter() {
+            if self.tilemap_collider.check_collision(*point) {
+                self.can_jump = true;
+                break;
+            }
+        }
 
         // if self.controller.body.position.x < -DISTANCE * 1.5 {
         //     self.controller.body.velocity.x = 0.0;
@@ -209,18 +216,19 @@ impl EventHandler for MyGame {
         // let camera_pos = self.world.camera_position();
         // self.world.look_at(Point2 { x: camera_pos.x + (self.controller.body.position.x - camera_pos.x) * deltatime.as_secs_f32() * 10.0, y: camera_pos.y });
 
-        if self.controller.body.position().y < -DISTANCE - 2.0 {
-            self.controller.body.position_mut().y = DISTANCE + 2.0;
+        let player_rect = self.controller.rect();
+        if player_rect.y < -DISTANCE - 2.0 {
+            self.controller.collider_mut().position_mut().y = DISTANCE + 2.0;
         }
-        if self.controller.body.position().x < -DISTANCE * 2.0 - 2.0 {
-            self.controller.body.position_mut().x = DISTANCE * 2.0 + 2.0;
+        if player_rect.x < -DISTANCE * 2.0 - 2.0 {
+            self.controller.collider_mut().position_mut().x = DISTANCE * 2.0 + 2.0;
         }
-        if self.controller.body.position().x > DISTANCE * 2.0 + 2.0 {
-            self.controller.body.position_mut().x = -DISTANCE * 2.0 - 2.0;
+        if player_rect.x > DISTANCE * 2.0 + 2.0 {
+            self.controller.collider_mut().position_mut().x = -DISTANCE * 2.0 - 2.0;
         }
 
         self.player_animator
-            .update(self.controller.body.velocity(), deltatime);
+            .update(self.controller.collider().velocity(), deltatime);
 
         // let time_seconds = self.total_time.as_secs_f32();
         // let speed = 4.0;
@@ -253,8 +261,8 @@ impl EventHandler for MyGame {
                 ctx,
                 &self.world,
                 Rect::new(
-                    self.controller.body.position().x,
-                    self.controller.body.position().y,
+                    self.controller.collider().position().x,
+                    self.controller.collider().position().y,
                     self.orientation as f32 * SIZE,
                     SIZE,
                 ),

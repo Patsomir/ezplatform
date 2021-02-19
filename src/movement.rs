@@ -1,18 +1,18 @@
 use std::time::Duration;
 
-use ggez::mint::Vector2;
+use ggez::{graphics::Rect, mint::{Point2, Vector2}};
 
 use crate::{collision::DynamicCollider, physics::PhysicsObject};
 
 pub struct MovementController {
-    pub body: DynamicCollider,
+    body: DynamicCollider,
     move_force: f32,
     jump_impulse: f32,
     max_speed: f32,
     move_speed_decay: f32,
     gravity_acceleration: f32,
-
     horizontal_force: f32,
+    ground_check_offsets: Vec<Vector2<f32>>
 }
 
 impl MovementController {
@@ -23,6 +23,7 @@ impl MovementController {
         max_speed: f32,
         move_speed_decay: f32,
         gravity_acceleration: f32,
+        ground_check_offsets: &[Vector2<f32>],
     ) -> Self {
         MovementController {
             body,
@@ -32,6 +33,7 @@ impl MovementController {
             move_speed_decay,
             gravity_acceleration,
             horizontal_force: 0.0,
+            ground_check_offsets: ground_check_offsets.into(),
         }
     }
 
@@ -52,6 +54,26 @@ impl MovementController {
             x: self.body.velocity().x,
             y: self.jump_impulse,
         });
+    }
+
+    pub fn collider(&self) -> &DynamicCollider {
+        &self.body
+    }
+
+    pub fn collider_mut(&mut self) -> &mut DynamicCollider {
+        &mut self.body
+    }
+
+    pub fn rect(&self) -> Rect {
+        self.body.rect()
+    }
+
+    pub fn ground_check_points(&self) -> Vec<Point2<f32>> {
+        let rect = self.body.rect();
+        return self.ground_check_offsets.iter().map(|offset| Point2 {
+            x: rect.x + 0.5 * offset.x * rect.w,
+            y: rect.y + 0.5 * offset.y * rect.h,
+        }).collect();
     }
 
     pub fn update(&mut self, deltatime: Duration) {
