@@ -1,5 +1,5 @@
 use ezplatform::game::{EzPlatform, SCREEN_HEIGHT, SCREEN_WIDTH};
-use ggez::{ContextBuilder, GameResult, event};
+use ggez::{event, ContextBuilder, GameResult};
 
 fn main() -> GameResult {
     let (mut ctx, mut event_loop) = ContextBuilder::new("EzPlatform", "Plamen Nikolov")

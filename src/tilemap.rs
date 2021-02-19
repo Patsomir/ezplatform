@@ -48,12 +48,7 @@ pub trait Tilemap {
             x: point.x as f32,
             y: point.y as f32,
         });
-        Rect::new(
-            x, 
-            y, 
-            self.tile_width(), 
-            self.tile_height()
-        )
+        Rect::new(x, y, self.tile_width(), self.tile_height())
     }
 
     fn segment_to_world(&self, segment: &TilemapSegment) -> Rect {
@@ -62,10 +57,10 @@ pub trait Tilemap {
             y: (segment.bottom_bound as f32 + segment.top_bound as f32) / 2.0,
         });
         Rect::new(
-            x, 
-            y, 
-            self.tile_width() * (segment.right_bound as f32 - segment.left_bound as f32 + 1.0), 
-            self.tile_height() * (segment.top_bound as f32 - segment.bottom_bound as f32 + 1.0)
+            x,
+            y,
+            self.tile_width() * (segment.right_bound as f32 - segment.left_bound as f32 + 1.0),
+            self.tile_height() * (segment.top_bound as f32 - segment.bottom_bound as f32 + 1.0),
         )
     }
 }

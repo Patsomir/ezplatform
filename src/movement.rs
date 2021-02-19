@@ -1,6 +1,9 @@
 use std::time::Duration;
 
-use ggez::{graphics::Rect, mint::{Point2, Vector2}};
+use ggez::{
+    graphics::Rect,
+    mint::{Point2, Vector2},
+};
 
 use crate::{collision::DynamicCollider, physics::PhysicsObject};
 
@@ -12,7 +15,7 @@ pub struct MovementController {
     move_speed_decay: f32,
     gravity_acceleration: f32,
     horizontal_force: f32,
-    ground_check_offsets: Vec<Vector2<f32>>
+    ground_check_offsets: Vec<Vector2<f32>>,
 }
 
 impl MovementController {
@@ -70,10 +73,14 @@ impl MovementController {
 
     pub fn ground_check_points(&self) -> Vec<Point2<f32>> {
         let rect = self.body.rect();
-        return self.ground_check_offsets.iter().map(|offset| Point2 {
-            x: rect.x + 0.5 * offset.x * rect.w,
-            y: rect.y + 0.5 * offset.y * rect.h,
-        }).collect();
+        return self
+            .ground_check_offsets
+            .iter()
+            .map(|offset| Point2 {
+                x: rect.x + 0.5 * offset.x * rect.w,
+                y: rect.y + 0.5 * offset.y * rect.h,
+            })
+            .collect();
     }
 
     pub fn update(&mut self, deltatime: Duration) {
@@ -90,7 +97,8 @@ impl MovementController {
         }
 
         let deltaseconds = deltatime.as_secs_f32();
-        if self.horizontal_force.abs() < 0.01 || self.horizontal_force * self.body.velocity().x < 0.0
+        if self.horizontal_force.abs() < 0.01
+            || self.horizontal_force * self.body.velocity().x < 0.0
         {
             if self.body.velocity().x.abs() < 0.01 {
                 self.body.velocity_mut().x = 0.0;

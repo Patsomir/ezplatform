@@ -1,7 +1,4 @@
-use ggez::{
-    graphics::Rect,
-    mint::Point2,
-};
+use ggez::{graphics::Rect, mint::Point2};
 
 pub struct World {
     screen_width: f32,

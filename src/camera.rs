@@ -5,7 +5,7 @@ use ggez::mint::Point2;
 pub enum FollowDirection {
     Horizontal,
     Vertical,
-    Both
+    Both,
 }
 
 pub trait Camera {
@@ -20,7 +20,7 @@ pub trait Camera {
 pub struct SharpCamera {
     position: Point2<f32>,
     destination: Point2<f32>,
-    follow_direction: FollowDirection, 
+    follow_direction: FollowDirection,
 }
 
 impl SharpCamera {
@@ -28,7 +28,7 @@ impl SharpCamera {
         Self {
             position,
             destination: position,
-            follow_direction: FollowDirection::Both
+            follow_direction: FollowDirection::Both,
         }
     }
 }
@@ -47,7 +47,7 @@ impl Camera for SharpCamera {
         match self.follow_direction {
             FollowDirection::Horizontal => new_position.y = self.position.y,
             FollowDirection::Vertical => new_position.x = self.position.x,
-            _ => ()
+            _ => (),
         }
         self.position = new_position;
     }
@@ -60,8 +60,8 @@ impl Camera for SharpCamera {
 pub struct SmoothCamera {
     position: Point2<f32>,
     destination: Point2<f32>,
-    follow_direction: FollowDirection, 
-    smoothness: f32
+    follow_direction: FollowDirection,
+    smoothness: f32,
 }
 
 impl SmoothCamera {
@@ -70,7 +70,7 @@ impl SmoothCamera {
             position,
             destination: position,
             follow_direction: FollowDirection::Both,
-            smoothness
+            smoothness,
         }
     }
 }
@@ -93,7 +93,7 @@ impl Camera for SmoothCamera {
         match self.follow_direction {
             FollowDirection::Horizontal => new_position.y = self.position.y,
             FollowDirection::Vertical => new_position.x = self.position.x,
-            _ => ()
+            _ => (),
         }
         self.position = new_position;
     }

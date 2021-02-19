@@ -1,4 +1,8 @@
-use ggez::{Context, GameResult, graphics::{self, DrawParam, Rect}, mint::Point2};
+use ggez::{
+    graphics::{self, DrawParam, Rect},
+    mint::Point2,
+    Context, GameResult,
+};
 
 use crate::{collision::TilemapCollider, rendering::WorldDrawable, tilemap::Tilemap, world::World};
 
@@ -26,7 +30,7 @@ pub fn draw_rect_in_world(ctx: &mut Context, rect: Rect, world: &World) -> GameR
     let mut rect = rect;
     rect.translate(Point2 {
         x: -rect.w / 2.0,
-        y: rect.h / 2.0
+        y: rect.h / 2.0,
     });
     let mesh = graphics::Mesh::new_rectangle(
         ctx,

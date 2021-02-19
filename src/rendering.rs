@@ -1,6 +1,10 @@
 use std::cell::RefCell;
 
-use ggez::{Context, GameResult, graphics::{Color, DrawParam, Drawable, Image, Rect}, mint::Point2};
+use ggez::{
+    graphics::{Color, DrawParam, Drawable, Image, Rect},
+    mint::Point2,
+    Context, GameResult,
+};
 
 use crate::{tilemap::Tilemap, world::World};
 

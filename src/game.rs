@@ -1,9 +1,23 @@
 use std::collections::{HashMap, VecDeque};
 
-use ggez::{Context, GameResult, event::{EventHandler, KeyCode, KeyMods}, graphics::{self, Color, FilterMode, Image, Rect}, input::keyboard, mint::{Point2, Vector2}, timer};
+use ggez::{
+    event::{EventHandler, KeyCode, KeyMods},
+    graphics::{self, Color, FilterMode, Image, Rect},
+    input::keyboard,
+    mint::{Point2, Vector2},
+    timer, Context, GameResult,
+};
 use rand::Rng;
 
-use crate::{animation::{ SpriteAnimator, SpriteSheetAnimation}, camera::{ Camera, SmoothCamera, FollowDirection }, collision::{ TilemapCollider, DynamicCollider}, movement::MovementController, physics::PhysicsObject, rendering::{SpriteSheet, TilemapRenderer, WorldDrawable}, world::World};
+use crate::{
+    animation::{SpriteAnimator, SpriteSheetAnimation},
+    camera::{Camera, FollowDirection, SmoothCamera},
+    collision::{DynamicCollider, TilemapCollider},
+    movement::MovementController,
+    physics::PhysicsObject,
+    rendering::{SpriteSheet, TilemapRenderer, WorldDrawable},
+    world::World,
+};
 
 // Controls
 const LEFT_KEY: KeyCode = KeyCode::A;
@@ -26,7 +40,8 @@ const JUMP_IMPULSE: f32 = 0.15;
 const MAX_SPEED: f32 = 0.08;
 const MOVE_SPEED_DECAY: f32 = 0.9;
 const GRAVITY_ACCELERATION: f32 = 0.5;
-const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[Vector2 { x: -0.95, y: -1.2 }, Vector2 { x: 0.95, y: -1.2 }];
+const GROUND_CHECK_OFFSETS: &[Vector2<f32>] =
+    &[Vector2 { x: -0.95, y: -1.2 }, Vector2 { x: 0.95, y: -1.2 }];
 
 // Cave params
 const TEMPLATE_WIDTH: u32 = 31;
@@ -75,7 +90,10 @@ struct Player {
 impl Player {
     fn new(ctx: &mut Context) -> Self {
         // Controller init
-        let body = DynamicCollider::from_rect(Rect::new(SPAWN_POSITION.x, SPAWN_POSITION.y,0.98 * SIZE, SIZE), MASS);
+        let body = DynamicCollider::from_rect(
+            Rect::new(SPAWN_POSITION.x, SPAWN_POSITION.y, 0.98 * SIZE, SIZE),
+            MASS,
+        );
         let controller = MovementController::from_components(
             body,
             MOVE_FORCE,
@@ -87,29 +105,32 @@ impl Player {
         );
 
         // Animator init
-        let idle_image = Image::new(ctx, PLAYER_IDLE).expect(&format!("Failed to load {}", PLAYER_IDLE));
+        let idle_image =
+            Image::new(ctx, PLAYER_IDLE).expect(&format!("Failed to load {}", PLAYER_IDLE));
         let idle_sprites = SpriteSheet::new(idle_image, 1, 1, 1);
         let idle_animation = SpriteSheetAnimation::new(idle_sprites, 1.0);
 
-        let jump_image = Image::new(ctx, PLAYER_JUMP).expect(&format!("Failed to load {}", PLAYER_JUMP));
+        let jump_image =
+            Image::new(ctx, PLAYER_JUMP).expect(&format!("Failed to load {}", PLAYER_JUMP));
         let jump_sprites = SpriteSheet::new(jump_image, 1, 1, 1);
         let jump_animation = SpriteSheetAnimation::new(jump_sprites, 1.0);
 
-        let fall_image = Image::new(ctx, PLAYER_FALL).expect(&format!("Failed to load {}", PLAYER_FALL));
+        let fall_image =
+            Image::new(ctx, PLAYER_FALL).expect(&format!("Failed to load {}", PLAYER_FALL));
         let fall_sprites = SpriteSheet::new(fall_image, 1, 1, 1);
         let fall_animation = SpriteSheetAnimation::new(fall_sprites, 1.0);
 
-        let walking_image = Image::new(ctx, PLAYER_WALK).expect(&format!("Failed to load {}", PLAYER_WALK));
+        let walking_image =
+            Image::new(ctx, PLAYER_WALK).expect(&format!("Failed to load {}", PLAYER_WALK));
         let walking_sprites = SpriteSheet::new(walking_image, 3, 2, 6);
         let walking_animation = SpriteSheetAnimation::new(walking_sprites, 30.0);
 
-        let mut animator: SpriteAnimator<Vector2<f32>> =
-            SpriteAnimator::from_animations(vec![
-                idle_animation,
-                walking_animation,
-                jump_animation,
-                fall_animation,
-            ]);
+        let mut animator: SpriteAnimator<Vector2<f32>> = SpriteAnimator::from_animations(vec![
+            idle_animation,
+            walking_animation,
+            jump_animation,
+            fall_animation,
+        ]);
         animator.add_rule(0, 1, |velocity| velocity.x.abs() > 0.01);
         animator.add_rule(1, 0, |velocity| velocity.x.abs() < 0.01);
         animator.add_rule(0, 2, |velocity| velocity.y > 0.01);
@@ -126,6 +147,19 @@ impl Player {
             can_jump: false,
         }
     }
+
+    fn draw(&self, ctx: &mut Context, world: &World) -> GameResult {
+        self.animator.get_drawable().draw_in_world(
+            ctx,
+            world,
+            Rect::new(
+                self.controller.collider().position().x,
+                self.controller.collider().position().y,
+                self.orientation as f32 * SIZE,
+                SIZE,
+            ),
+        )
+    }
 }
 
 struct TilemapCave {
@@ -140,13 +174,20 @@ impl TilemapCave {
     fn new(ctx: &mut Context) -> Self {
         let tile_hashmap = tile_hashmap();
 
-        let mut ground_image = Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
+        let mut ground_image =
+            Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
         ground_image.set_filter(FilterMode::Nearest);
 
-        let tilemap_renderers: VecDeque<_> = (-1..=1).into_iter().map(|fragment_index| {
-            TilemapCave::generate_tilemap_renderer(&ground_image, &tile_hashmap, fragment_index)
-        }).collect();
-        let tilemap_colliders: VecDeque<_> = tilemap_renderers.iter().map(|renderer| TilemapCollider::from(renderer)).collect();
+        let tilemap_renderers: VecDeque<_> = (-1..=1)
+            .into_iter()
+            .map(|fragment_index| {
+                TilemapCave::generate_tilemap_renderer(&ground_image, &tile_hashmap, fragment_index)
+            })
+            .collect();
+        let tilemap_colliders: VecDeque<_> = tilemap_renderers
+            .iter()
+            .map(|renderer| TilemapCollider::from(renderer))
+            .collect();
 
         Self {
             current_fragment: 0,
@@ -185,7 +226,7 @@ impl TilemapCave {
         let tilemap_width = TEMPLATE_WIDTH as f32 * TILE_WIDTH;
         (
             tilemap_width * (self.current_fragment as f32 - 1.5),
-            tilemap_width * (self.current_fragment as f32 + 1.5)
+            tilemap_width * (self.current_fragment as f32 + 1.5),
         )
     }
 
@@ -193,8 +234,13 @@ impl TilemapCave {
         self.current_fragment += 1;
         self.tilemap_renderers.pop_front();
         self.tilemap_colliders.pop_front();
-        let new_renderer = TilemapCave::generate_tilemap_renderer(&self.ground_image, &self.tile_hashmap, self.current_fragment + 1);
-        self.tilemap_colliders.push_back(TilemapCollider::from(&new_renderer));
+        let new_renderer = TilemapCave::generate_tilemap_renderer(
+            &self.ground_image,
+            &self.tile_hashmap,
+            self.current_fragment + 1,
+        );
+        self.tilemap_colliders
+            .push_back(TilemapCollider::from(&new_renderer));
         self.tilemap_renderers.push_back(new_renderer);
     }
 
@@ -202,15 +248,35 @@ impl TilemapCave {
         self.current_fragment -= 1;
         self.tilemap_renderers.pop_back();
         self.tilemap_colliders.pop_back();
-        let new_renderer = TilemapCave::generate_tilemap_renderer(&self.ground_image, &self.tile_hashmap, self.current_fragment - 1);
-        self.tilemap_colliders.push_front(TilemapCollider::from(&new_renderer));
+        let new_renderer = TilemapCave::generate_tilemap_renderer(
+            &self.ground_image,
+            &self.tile_hashmap,
+            self.current_fragment - 1,
+        );
+        self.tilemap_colliders
+            .push_front(TilemapCollider::from(&new_renderer));
         self.tilemap_renderers.push_front(new_renderer);
     }
 
-    fn generate_tilemap_renderer(image: &Image, tile_hashmap: &TileHashmap, fragment_index: i32) -> TilemapRenderer {
+    fn generate_tilemap_renderer(
+        image: &Image,
+        tile_hashmap: &TileHashmap,
+        fragment_index: i32,
+    ) -> TilemapRenderer {
         let ground_sprites = SpriteSheet::new(image.clone(), 4, 4, 16);
-        let ground_template = generate_ground_template(TEMPLATE_WIDTH, TEMPLATE_HEIGHT, TEMPLATE_CONNECTIONS, TEMPLATE_CONNECTIONS, FLOOR_CEIL_LIMITS, STEP, &tile_hashmap);
-        let ground_template = &ground_template.iter().map(|row| &(*row)[..]).collect::<Vec<_>>()[..];
+        let ground_template = generate_ground_template(
+            TEMPLATE_WIDTH,
+            TEMPLATE_HEIGHT,
+            TEMPLATE_CONNECTIONS,
+            TEMPLATE_CONNECTIONS,
+            FLOOR_CEIL_LIMITS,
+            STEP,
+            &tile_hashmap,
+        );
+        let ground_template = &ground_template
+            .iter()
+            .map(|row| &(*row)[..])
+            .collect::<Vec<_>>()[..];
         let tilemap_renderer = TilemapRenderer::from_components(
             ground_sprites,
             ground_template,
@@ -239,7 +305,8 @@ impl EzPlatform {
         let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
         camera.set_follow_direction(FollowDirection::Horizontal);
 
-        let mut ground_image = Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
+        let mut ground_image =
+            Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
         ground_image.set_filter(FilterMode::Nearest);
 
         let cave = TilemapCave::new(ctx);
@@ -283,7 +350,8 @@ impl EventHandler for EzPlatform {
         let player_rect = self.player.controller.rect();
 
         let cave_bounds = self.cave.bounds();
-        let relative_position_in_cave = (player_rect.x - cave_bounds.0) / (cave_bounds.1 - cave_bounds.0);
+        let relative_position_in_cave =
+            (player_rect.x - cave_bounds.0) / (cave_bounds.1 - cave_bounds.0);
         if relative_position_in_cave > 0.75 {
             self.cave.push_right();
         } else if relative_position_in_cave < 0.25 {
@@ -292,13 +360,16 @@ impl EventHandler for EzPlatform {
 
         self.camera.set_destination(Point2 {
             x: player_rect.x + self.player.orientation as f32 * CAMERA_AHEAD_DISTANCE,
-            y: player_rect.y
+            y: player_rect.y,
         });
         self.camera.update(deltatime);
         self.world.look_at(self.camera.position());
 
         let collisions = self.cave.get_collisions(player_rect);
-        self.player.controller.collider_mut().resolve_collisions(&collisions);
+        self.player
+            .controller
+            .collider_mut()
+            .resolve_collisions(&collisions);
         self.player.can_jump = false;
         for point in self.player.controller.ground_check_points().iter() {
             if self.cave.check_collision(*point) {
@@ -314,28 +385,19 @@ impl EventHandler for EzPlatform {
             self.player.controller.collider_mut().position_mut().y = -DISTANCE - 0.5;
         }
 
-        self.player.animator.update(self.player.controller.collider().velocity(), deltatime);
+        self.player
+            .animator
+            .update(self.player.controller.collider().velocity(), deltatime);
 
         Ok(())
     }
 
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, BG_COLOR);
-        
+
         self.cave.draw(ctx, &self.world)?;
 
-        self.player.animator
-            .get_drawable()
-            .draw_in_world(
-                ctx,
-                &self.world,
-                Rect::new(
-                    self.player.controller.collider().position().x,
-                    self.player.controller.collider().position().y,
-                    self.player.orientation as f32 * SIZE,
-                    SIZE,
-                ),
-            )?;
+        self.player.draw(ctx, &self.world)?;
 
         graphics::present(ctx)?;
         Ok(())
@@ -374,8 +436,19 @@ fn clamp(value: i32, min: i32, max: i32) -> i32 {
     }
 }
 
-fn generate_ground_template(width: u32, height: u32, start: (u32, u32), end: (u32, u32), limits: (u32, u32), step: u32, map: &TileHashmap) -> Vec<Vec<u32>> {
-    let mut template: Vec<Vec<u32>> = (0..height).into_iter().map(|_| vec![E; width as usize]).collect();
+fn generate_ground_template(
+    width: u32,
+    height: u32,
+    start: (u32, u32),
+    end: (u32, u32),
+    limits: (u32, u32),
+    step: u32,
+    map: &TileHashmap,
+) -> Vec<Vec<u32>> {
+    let mut template: Vec<Vec<u32>> = (0..height)
+        .into_iter()
+        .map(|_| vec![E; width as usize])
+        .collect();
     let mut floor = start.0 as i32;
     let mut ciel = start.1 as i32;
     let step = step as i32;
@@ -391,8 +464,16 @@ fn generate_ground_template(width: u32, height: u32, start: (u32, u32), end: (u3
     let mut rng = rand::thread_rng();
 
     for col in 1..(width - 1) {
-        floor = clamp((floor + rng.gen_range(0..=2*step)) - step,0, limits.0 as i32);
-        ciel = clamp((ciel + rng.gen_range(0..=2*step)) - step,limits.1 as i32, height - 1);
+        floor = clamp(
+            (floor + rng.gen_range(0..=2 * step)) - step,
+            0,
+            limits.0 as i32,
+        );
+        ciel = clamp(
+            (ciel + rng.gen_range(0..=2 * step)) - step,
+            limits.1 as i32,
+            height - 1,
+        );
         if floor == 0 || ciel == height - 1 {
             continue;
         }

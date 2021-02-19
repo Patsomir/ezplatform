@@ -1,6 +1,13 @@
-use crate::{physics::{PhysicsObject, ZERO_VECTOR}, rendering::TilemapRenderer, tilemap::TilemapSegment};
 use crate::tilemap::Tilemap;
-use ggez::{graphics::Rect, mint::{Point2, Vector2}};
+use crate::{
+    physics::{PhysicsObject, ZERO_VECTOR},
+    rendering::TilemapRenderer,
+    tilemap::TilemapSegment,
+};
+use ggez::{
+    graphics::Rect,
+    mint::{Point2, Vector2},
+};
 
 pub struct TilemapCollider {
     tile_width: f32,
@@ -91,7 +98,7 @@ impl TilemapCollider {
             }
             let tile = match row_vec.get(col as usize) {
                 None => false,
-                Some(tile_bool) => *tile_bool
+                Some(tile_bool) => *tile_bool,
             };
 
             if tile {
@@ -236,12 +243,7 @@ impl DynamicCollider {
     }
 
     pub fn rect(&self) -> Rect {
-        Rect::new(
-            self.position.x,
-            self.position.y,
-            self.width,
-            self.height
-        )
+        Rect::new(self.position.x, self.position.y, self.width, self.height)
     }
 
     pub fn resolve_collision(&mut self, rect: &Rect) {
@@ -263,8 +265,7 @@ impl DynamicCollider {
                     self.position.x = rect.x - 0.5 * rect.w - 0.5 * self.width;
                 }
             }
-        }
-        else {
+        } else {
             if collision_magnitude_y > trigger_magnitude {
                 self.velocity.y = 0.0;
                 if self.position.y > rect.y {
