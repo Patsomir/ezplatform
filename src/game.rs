@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use ggez::{Context, GameResult, event::{EventHandler, KeyCode, KeyMods}, graphics::{self, Color, FilterMode, Image, Rect}, input::keyboard, mint::{Point2, Vector2}, timer};
 use rand::Rng;
@@ -31,12 +31,11 @@ const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[Vector2 { x: -0.95, y: -1.2 }, V
 // Cave params
 const TEMPLATE_WIDTH: u32 = 31;
 const TEMPLATE_HEIGHT: u32 = 15;
-const FLOOR_CEIL_LIMITS: (u32, u32) = (7, 7);
+const FLOOR_CEIL_LIMITS: (u32, u32) = (7, 8);
 const TEMPLATE_CONNECTIONS: (u32, u32) = (5, 10);
 const STEP: u32 = 2;
 const TILE_WIDTH: f32 = 1.0;
 const TILE_HEIGHT: f32 = 1.0;
-const ORIGIN: Point2<i32> = Point2 { x: 16, y: 7 };
 
 const E: u32 = 0;
 const N: u32 = 1;
@@ -63,7 +62,7 @@ const DISTANCE: f32 = 7.0;
 
 // Other params
 const BG_COLOR: Color = Color::new(0.1, 0.08, 0.05, 1.0);
-const CAMERA_SMOOTHNESS: f32 = 2.5;
+const CAMERA_SMOOTHNESS: f32 = 1.5;
 const CAMERA_AHEAD_DISTANCE: f32 = 4.0;
 
 struct Player {
@@ -129,27 +128,87 @@ impl Player {
     }
 }
 
-pub struct EzPlatform {
-    world: World,
-    tilemap_collider: TilemapCollider,
-    tilemap_renderer: TilemapRenderer,
-    player: Player,
+struct TilemapCave {
+    current_fragment: i32,
+    tilemap_renderers: VecDeque<TilemapRenderer>,
+    tilemap_colliders: VecDeque<TilemapCollider>,
     tile_hashmap: TileHashmap,
-    camera: SmoothCamera
+    ground_image: Image,
 }
 
-impl<'a> EzPlatform {
-    pub fn new(ctx: &mut Context) -> EzPlatform {
-        let player = Player::new(ctx);
-        let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
-        let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
-        camera.set_follow_direction(FollowDirection::Horizontal);
+impl TilemapCave {
+    fn new(ctx: &mut Context) -> Self {
         let tile_hashmap = tile_hashmap();
 
         let mut ground_image = Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
         ground_image.set_filter(FilterMode::Nearest);
 
-        let ground_sprites = SpriteSheet::new(ground_image, 4, 4, 16);
+        let tilemap_renderers: VecDeque<_> = (-1..=1).into_iter().map(|fragment_index| {
+            TilemapCave::generate_tilemap_renderer(&ground_image, &tile_hashmap, fragment_index)
+        }).collect();
+        let tilemap_colliders: VecDeque<_> = tilemap_renderers.iter().map(|renderer| TilemapCollider::from(renderer)).collect();
+
+        Self {
+            current_fragment: 0,
+            tile_hashmap,
+            tilemap_renderers,
+            tilemap_colliders,
+            ground_image,
+        }
+    }
+
+    fn draw(&self, ctx: &mut Context, world: &World) -> GameResult {
+        for renderer in self.tilemap_renderers.iter() {
+            renderer.draw_in_world(ctx, &world, Rect::default())?;
+        }
+        Ok(())
+    }
+
+    fn get_collisions(&self, rect: Rect) -> Vec<Rect> {
+        let mut result = Vec::new();
+        for collider in self.tilemap_colliders.iter() {
+            result.append(&mut collider.get_collision_lines(rect));
+        }
+        result
+    }
+
+    fn check_collision(&self, point: Point2<f32>) -> bool {
+        for collider in self.tilemap_colliders.iter() {
+            if collider.check_collision(point) {
+                return true;
+            }
+        }
+        false
+    }
+
+    fn bounds(&self) -> (f32, f32) {
+        let tilemap_width = TEMPLATE_WIDTH as f32 * TILE_WIDTH;
+        (
+            tilemap_width * (self.current_fragment as f32 - 1.5),
+            tilemap_width * (self.current_fragment as f32 + 1.5)
+        )
+    }
+
+    fn push_right(&mut self) {
+        self.current_fragment += 1;
+        self.tilemap_renderers.pop_front();
+        self.tilemap_colliders.pop_front();
+        let new_renderer = TilemapCave::generate_tilemap_renderer(&self.ground_image, &self.tile_hashmap, self.current_fragment + 1);
+        self.tilemap_colliders.push_back(TilemapCollider::from(&new_renderer));
+        self.tilemap_renderers.push_back(new_renderer);
+    }
+
+    fn push_left(&mut self) {
+        self.current_fragment -= 1;
+        self.tilemap_renderers.pop_back();
+        self.tilemap_colliders.pop_back();
+        let new_renderer = TilemapCave::generate_tilemap_renderer(&self.ground_image, &self.tile_hashmap, self.current_fragment - 1);
+        self.tilemap_colliders.push_front(TilemapCollider::from(&new_renderer));
+        self.tilemap_renderers.push_front(new_renderer);
+    }
+
+    fn generate_tilemap_renderer(image: &Image, tile_hashmap: &TileHashmap, fragment_index: i32) -> TilemapRenderer {
+        let ground_sprites = SpriteSheet::new(image.clone(), 4, 4, 16);
         let ground_template = generate_ground_template(TEMPLATE_WIDTH, TEMPLATE_HEIGHT, TEMPLATE_CONNECTIONS, TEMPLATE_CONNECTIONS, FLOOR_CEIL_LIMITS, STEP, &tile_hashmap);
         let ground_template = &ground_template.iter().map(|row| &(*row)[..]).collect::<Vec<_>>()[..];
         let tilemap_renderer = TilemapRenderer::from_components(
@@ -157,18 +216,39 @@ impl<'a> EzPlatform {
             ground_template,
             TILE_WIDTH,
             TILE_HEIGHT,
-            ORIGIN,
+            Point2 {
+                x: TEMPLATE_WIDTH as i32 / 2 - fragment_index * TEMPLATE_WIDTH as i32,
+                y: TEMPLATE_HEIGHT as i32 / 2,
+            },
         );
+        tilemap_renderer
+    }
+}
 
-        let tilemap_collider = TilemapCollider::from(&tilemap_renderer);
+pub struct EzPlatform {
+    world: World,
+    camera: SmoothCamera,
+    cave: TilemapCave,
+    player: Player,
+}
+
+impl EzPlatform {
+    pub fn new(ctx: &mut Context) -> EzPlatform {
+        let player = Player::new(ctx);
+        let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
+        let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
+        camera.set_follow_direction(FollowDirection::Horizontal);
+
+        let mut ground_image = Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
+        ground_image.set_filter(FilterMode::Nearest);
+
+        let cave = TilemapCave::new(ctx);
 
         Self {
-            player,
+            camera,
             world,
-            tilemap_collider,
-            tilemap_renderer,
-            tile_hashmap,
-            camera
+            cave,
+            player,
         }
     }
 }
@@ -202,6 +282,14 @@ impl EventHandler for EzPlatform {
 
         let player_rect = self.player.controller.rect();
 
+        let cave_bounds = self.cave.bounds();
+        let relative_position_in_cave = (player_rect.x - cave_bounds.0) / (cave_bounds.1 - cave_bounds.0);
+        if relative_position_in_cave > 0.75 {
+            self.cave.push_right();
+        } else if relative_position_in_cave < 0.25 {
+            self.cave.push_left();
+        }
+
         self.camera.set_destination(Point2 {
             x: player_rect.x + self.player.orientation as f32 * CAMERA_AHEAD_DISTANCE,
             y: player_rect.y
@@ -209,11 +297,11 @@ impl EventHandler for EzPlatform {
         self.camera.update(deltatime);
         self.world.look_at(self.camera.position());
 
-        let collisions = self.tilemap_collider.get_collision_lines(player_rect);
+        let collisions = self.cave.get_collisions(player_rect);
         self.player.controller.collider_mut().resolve_collisions(&collisions);
         self.player.can_jump = false;
         for point in self.player.controller.ground_check_points().iter() {
-            if self.tilemap_collider.check_collision(*point) {
+            if self.cave.check_collision(*point) {
                 self.player.can_jump = true;
                 break;
             }
@@ -234,7 +322,7 @@ impl EventHandler for EzPlatform {
     fn draw(&mut self, ctx: &mut Context) -> GameResult<()> {
         graphics::clear(ctx, BG_COLOR);
         
-        self.tilemap_renderer.draw_in_world(ctx, &self.world, Rect::default())?;
+        self.cave.draw(ctx, &self.world)?;
 
         self.player.animator
             .get_drawable()
