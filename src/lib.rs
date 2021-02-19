@@ -6,3 +6,4 @@ pub mod physics;
 pub mod rendering;
 pub mod tilemap;
 pub mod world;
+pub mod game;
