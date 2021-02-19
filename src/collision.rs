@@ -1,4 +1,4 @@
-use crate::{physics::{PhysicsObject, ZERO_VECTOR}, rendering::TilemapRenderer};
+use crate::{physics::{PhysicsObject, ZERO_VECTOR}, rendering::TilemapRenderer, tilemap::TilemapSegment};
 use crate::tilemap::Tilemap;
 use ggez::{graphics::Rect, mint::{Point2, Vector2}};
 
@@ -47,34 +47,91 @@ impl TilemapCollider {
         self.origin = origin;
     }
 
-    pub fn get_collisions(&self, rect: Rect) -> Vec<Rect> {
-        let local_x = rect.x / self.tile_width + self.origin.x as f32;
-        let local_y = rect.y / self.tile_height + self.origin.y as f32;
-        let half_local_w = 0.5 * rect.w / self.tile_width;
-        let half_local_h = 0.5 * rect.h / self.tile_height;
-
-        let left_bound = (local_x - half_local_w).round() as isize;
-        let right_bound = (local_x + half_local_w).round() as isize;
-        let bottom_bound = (local_y - half_local_h).round() as isize;
-        let top_bound = (local_y + half_local_h).round() as isize;
+    pub fn get_collision_tiles(&self, rect: Rect) -> Vec<Rect> {
+        let TilemapSegment {
+            left_bound,
+            right_bound,
+            bottom_bound,
+            top_bound,
+        } = self.tilemap_overlap(rect);
 
         let mut result: Vec<Rect> = Vec::new();
         for row in bottom_bound..(top_bound + 1) {
-            for col in left_bound..(right_bound + 1) {
-                if row >= 0 && col >= 0 {
-                    if let Some(row_vec) = self.tiles.get(row as usize) {
-                        if let Some(tile) = row_vec.get(col as usize) {
-                            if *tile {
-                                let Point2 { x, y } = self.tilemap_to_world(Point2 {
-                                    x: col as f32,
-                                    y: row as f32,
-                                });
-                                result.push(Rect::new(x, y, self.tile_width, self.tile_height));
-                            }
+            if row < 0 {
+                continue;
+            }
+            if let Some(row_vec) = self.tiles.get(row as usize) {
+                for col in left_bound..(right_bound + 1) {
+                    if col < 0 {
+                        continue;
+                    }
+                    if let Some(tile) = row_vec.get(col as usize) {
+                        if *tile {
+                            result.push(self.tile_to_world(Point2 { x: col, y: row }));
                         }
                     }
                 }
             }
+        }
+        result
+    }
+
+    fn get_row_rects(&self, row: i32, left_bound: i32, right_bound: i32) -> Vec<Rect> {
+        let mut result: Vec<Rect> = Vec::new();
+        let row_vec = self.tiles.get(row as usize);
+        if row < 0 || row_vec.is_none() {
+            return result;
+        }
+        let row_vec = row_vec.unwrap();
+        let mut segment_left: Option<i32> = None;
+        let mut segment_right: i32 = -1;
+        for col in left_bound..(right_bound + 1) {
+            if col < 0 {
+                continue;
+            }
+            let tile = match row_vec.get(col as usize) {
+                None => false,
+                Some(tile_bool) => *tile_bool
+            };
+
+            if tile {
+                if segment_left.is_none() {
+                    segment_left = Some(col);
+                }
+                segment_right = col;
+            } else {
+                if let Some(segment_left) = segment_left {
+                    result.push(self.segment_to_world(&TilemapSegment {
+                        left_bound: segment_left,
+                        right_bound: segment_right,
+                        bottom_bound: row,
+                        top_bound: row,
+                    }));
+                };
+            }
+        }
+        if let Some(segment_left) = segment_left {
+            result.push(self.segment_to_world(&TilemapSegment {
+                left_bound: segment_left,
+                right_bound: segment_right,
+                bottom_bound: row,
+                top_bound: row,
+            }));
+        };
+        result
+    }
+
+    pub fn get_collision_lines(&self, rect: Rect) -> Vec<Rect> {
+        let TilemapSegment {
+            left_bound,
+            right_bound,
+            bottom_bound,
+            top_bound,
+        } = self.tilemap_overlap(rect);
+
+        let mut result: Vec<Rect> = Vec::new();
+        for row in bottom_bound..(top_bound + 1) {
+            result.append(&mut self.get_row_rects(row, left_bound, right_bound));
         }
         result
     }

@@ -180,7 +180,7 @@ impl EventHandler for MyGame {
             SIZE,
             SIZE,
         );
-        let collisions = self.tilemap_collider.get_collisions(player_rect);
+        let collisions = self.tilemap_collider.get_collision_lines(player_rect);
         // if collisions.len() != 0 && self.controller.body.velocity().y < 0.0 {
         //     let max_rect = collisions.iter().fold(collisions[0], |a, b| {
         //         if a.y < b.y {
