@@ -11,7 +11,7 @@ use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{graphics::Image, timer};
 use ggez::{Context, ContextBuilder, GameResult};
 
-use ezplatform::rendering::SpriteSheet;
+use ezplatform::{physics::PhysicsPoint, rendering::SpriteSheet};
 use ezplatform::{animation::SpriteAnimator, rendering::TilemapRenderer, world::World};
 use ezplatform::{animation::SpriteSheetAnimation, physics::PhysicsObject};
 use ezplatform::{
@@ -78,7 +78,7 @@ struct MyGame {
 
 impl MyGame {
     pub fn new(ctx: &mut Context, world: World) -> MyGame {
-        let body = PhysicsObject::new(ZERO_POINT, MASS);
+        let body = PhysicsPoint::new(ZERO_POINT, MASS);
         let controller = MovementController::from_components(
             body,
             MOVE_FORCE,
@@ -149,7 +149,7 @@ impl MyGame {
 impl EventHandler for MyGame {
     fn key_down_event(
         &mut self,
-        ctx: &mut Context,
+        _ctx: &mut Context,
         keycode: KeyCode,
         _keymods: KeyMods,
         _repeat: bool,
@@ -175,22 +175,22 @@ impl EventHandler for MyGame {
         self.controller.update(deltatime);
 
         let player_rect = Rect::new(
-            self.controller.body.position.x,
-            self.controller.body.position.y,
+            self.controller.body.position().x,
+            self.controller.body.position().y,
             SIZE,
             SIZE,
         );
         let collisions = self.tilemap_collider.get_collisions(player_rect);
-        if collisions.len() != 0 && self.controller.body.velocity.y < 0.0 {
+        if collisions.len() != 0 && self.controller.body.velocity().y < 0.0 {
             let max_rect = collisions.iter().fold(collisions[0], |a, b| {
                 if a.y < b.y {
                     return *b;
                 }
                 a
             });
-            if self.controller.body.position.y > max_rect.y {
-                self.controller.body.position.y = max_rect.y + max_rect.h / 2.0 + SIZE / 2.0;
-                self.controller.body.velocity.y = 0.0;
+            if self.controller.body.position().y > max_rect.y {
+                self.controller.body.position_mut().y = max_rect.y + max_rect.h / 2.0 + SIZE / 2.0;
+                self.controller.body.velocity_mut().y = 0.0;
                 self.can_jump = true;
             }
         }
@@ -207,18 +207,18 @@ impl EventHandler for MyGame {
         // let camera_pos = self.world.camera_position();
         // self.world.look_at(Point2 { x: camera_pos.x + (self.controller.body.position.x - camera_pos.x) * deltatime.as_secs_f32() * 10.0, y: camera_pos.y });
 
-        if self.controller.body.position.y < -DISTANCE - 2.0 {
-            self.controller.body.position.y = DISTANCE + 2.0;
+        if self.controller.body.position().y < -DISTANCE - 2.0 {
+            self.controller.body.position_mut().y = DISTANCE + 2.0;
         }
-        if self.controller.body.position.x < -DISTANCE * 2.0 - 2.0 {
-            self.controller.body.position.x = DISTANCE * 2.0 + 2.0;
+        if self.controller.body.position().x < -DISTANCE * 2.0 - 2.0 {
+            self.controller.body.position_mut().x = DISTANCE * 2.0 + 2.0;
         }
-        if self.controller.body.position.x > DISTANCE * 2.0 + 2.0 {
-            self.controller.body.position.x = -DISTANCE * 2.0 - 2.0;
+        if self.controller.body.position().x > DISTANCE * 2.0 + 2.0 {
+            self.controller.body.position_mut().x = -DISTANCE * 2.0 - 2.0;
         }
 
         self.player_animator
-            .update(self.controller.body.velocity, deltatime);
+            .update(self.controller.body.velocity(), deltatime);
 
         // let time_seconds = self.total_time.as_secs_f32();
         // let speed = 4.0;
@@ -251,8 +251,8 @@ impl EventHandler for MyGame {
                 ctx,
                 &self.world,
                 Rect::new(
-                    self.controller.body.position.x,
-                    self.controller.body.position.y,
+                    self.controller.body.position().x,
+                    self.controller.body.position().y,
                     self.orientation as f32 * SIZE,
                     SIZE,
                 ),
