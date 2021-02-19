@@ -179,11 +179,31 @@ impl DynamicCollider {
         if !self_rect.overlaps(&rect) {
             return;
         }
-        let collision_direction = Vector2 {
-            x: self_rect.x - rect.x,
-            y: self_rect.y - rect.y
-        };
-        self.apply_velocity(collision_direction);
+
+        let collision_magnitude_x = 0.5 * (rect.w + self.width) - (self.position.x - rect.x).abs();
+        let collision_magnitude_y = 0.5 * (rect.h + self.height) - (self.position.y - rect.y).abs();
+        let trigger_magnitude = 0.00001;
+
+        if collision_magnitude_x < collision_magnitude_y {
+            if collision_magnitude_x > trigger_magnitude {
+                self.velocity.x = 0.0;
+                if self.position.x > rect.x {
+                    self.position.x = rect.x + 0.5 * rect.w + 0.5 * self.width;
+                } else {
+                    self.position.x = rect.x - 0.5 * rect.w - 0.5 * self.width;
+                }
+            }
+        }
+        else {
+            if collision_magnitude_y > trigger_magnitude {
+                self.velocity.y = 0.0;
+                if self.position.y > rect.y {
+                    self.position.y = rect.y + 0.5 * rect.h + 0.5 * self.height;
+                } else {
+                    self.position.y = rect.y - 0.5 * rect.h - 0.5 * self.height;
+                }
+            }
+        }
     }
 
     pub fn resolve_collisions(&mut self, walls: &[Rect]) {

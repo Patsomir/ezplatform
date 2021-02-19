@@ -11,7 +11,7 @@ use ggez::{graphics, input::keyboard, mint::Vector2};
 use ggez::{graphics::Image, timer};
 use ggez::{Context, ContextBuilder, GameResult};
 
-use ezplatform::{physics::PhysicsPoint, rendering::SpriteSheet};
+use ezplatform::{collision::DynamicCollider, rendering::SpriteSheet};
 use ezplatform::{animation::SpriteAnimator, rendering::TilemapRenderer, world::World};
 use ezplatform::{animation::SpriteSheetAnimation, physics::PhysicsObject};
 use ezplatform::{
@@ -49,13 +49,13 @@ const GRAVITY_ACCELERATION: f32 = 0.5;
 const ZERO_POINT: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
 
 const GROUND_TEMPLATE: &[&[u32]] = &[
-    &[0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    &[0, 0, 7, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[7, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-    &[0, 7, 3, 3, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0],
+    &[7, 3, 3, 3, 8, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     &[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 8],
@@ -78,7 +78,7 @@ struct MyGame {
 
 impl MyGame {
     pub fn new(ctx: &mut Context, world: World) -> MyGame {
-        let body = PhysicsPoint::new(ZERO_POINT, MASS);
+        let body = DynamicCollider::from_rect(Rect::new(ZERO_POINT.x, ZERO_POINT.y, SIZE, SIZE), MASS);
         let controller = MovementController::from_components(
             body,
             MOVE_FORCE,
@@ -181,19 +181,21 @@ impl EventHandler for MyGame {
             SIZE,
         );
         let collisions = self.tilemap_collider.get_collisions(player_rect);
-        if collisions.len() != 0 && self.controller.body.velocity().y < 0.0 {
-            let max_rect = collisions.iter().fold(collisions[0], |a, b| {
-                if a.y < b.y {
-                    return *b;
-                }
-                a
-            });
-            if self.controller.body.position().y > max_rect.y {
-                self.controller.body.position_mut().y = max_rect.y + max_rect.h / 2.0 + SIZE / 2.0;
-                self.controller.body.velocity_mut().y = 0.0;
-                self.can_jump = true;
-            }
-        }
+        // if collisions.len() != 0 && self.controller.body.velocity().y < 0.0 {
+        //     let max_rect = collisions.iter().fold(collisions[0], |a, b| {
+        //         if a.y < b.y {
+        //             return *b;
+        //         }
+        //         a
+        //     });
+        //     if self.controller.body.position().y > max_rect.y {
+        //         self.controller.body.position_mut().y = max_rect.y + max_rect.h / 2.0 + SIZE / 2.0;
+        //         self.controller.body.velocity_mut().y = 0.0;
+        //         self.can_jump = true;
+        //     }
+        // }
+        self.controller.body.resolve_collisions(&collisions);
+        self.can_jump = true;
 
         // if self.controller.body.position.x < -DISTANCE * 1.5 {
         //     self.controller.body.velocity.x = 0.0;

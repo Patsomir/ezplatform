@@ -2,10 +2,10 @@ use std::time::Duration;
 
 use ggez::mint::Vector2;
 
-use crate::physics::{PhysicsObject, PhysicsPoint};
+use crate::{collision::DynamicCollider, physics::PhysicsObject};
 
 pub struct MovementController {
-    pub body: PhysicsPoint,
+    pub body: DynamicCollider,
     move_force: f32,
     jump_impulse: f32,
     max_speed: f32,
@@ -17,7 +17,7 @@ pub struct MovementController {
 
 impl MovementController {
     pub fn from_components(
-        body: PhysicsPoint,
+        body: DynamicCollider,
         move_force: f32,
         jump_impulse: f32,
         max_speed: f32,
