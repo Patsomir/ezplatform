@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use ggez::{Context, GameResult, event::{EventHandler, KeyCode, KeyMods}, graphics::{self, Color, FilterMode, Image, Rect}, input::keyboard, mint::{Point2, Vector2}, timer};
 use rand::Rng;
 
-use crate::{animation::{ SpriteAnimator, SpriteSheetAnimation}, collision::{ TilemapCollider, DynamicCollider}, movement::MovementController, physics::PhysicsObject, rendering::{SpriteSheet, TilemapRenderer, WorldDrawable}, world::World};
+use crate::{animation::{ SpriteAnimator, SpriteSheetAnimation}, camera::{ Camera, SmoothCamera, FollowDirection }, collision::{ TilemapCollider, DynamicCollider}, movement::MovementController, physics::PhysicsObject, rendering::{SpriteSheet, TilemapRenderer, WorldDrawable}, world::World};
 
 // Controls
 const LEFT_KEY: KeyCode = KeyCode::A;
@@ -63,6 +63,8 @@ const DISTANCE: f32 = 7.0;
 
 // Other params
 const BG_COLOR: Color = Color::new(0.1, 0.08, 0.05, 1.0);
+const CAMERA_SMOOTHNESS: f32 = 2.5;
+const CAMERA_AHEAD_DISTANCE: f32 = 4.0;
 
 struct Player {
     animator: SpriteAnimator<Vector2<f32>>,
@@ -133,12 +135,15 @@ pub struct EzPlatform {
     tilemap_renderer: TilemapRenderer,
     player: Player,
     tile_hashmap: TileHashmap,
+    camera: SmoothCamera
 }
 
-impl EzPlatform {
+impl<'a> EzPlatform {
     pub fn new(ctx: &mut Context) -> EzPlatform {
         let player = Player::new(ctx);
         let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
+        let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
+        camera.set_follow_direction(FollowDirection::Horizontal);
         let tile_hashmap = tile_hashmap();
 
         let mut ground_image = Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
@@ -162,7 +167,8 @@ impl EzPlatform {
             world,
             tilemap_collider,
             tilemap_renderer,
-            tile_hashmap
+            tile_hashmap,
+            camera
         }
     }
 }
@@ -195,6 +201,14 @@ impl EventHandler for EzPlatform {
         self.player.controller.update(deltatime);
 
         let player_rect = self.player.controller.rect();
+
+        self.camera.set_destination(Point2 {
+            x: player_rect.x + self.player.orientation as f32 * CAMERA_AHEAD_DISTANCE,
+            y: player_rect.y
+        });
+        self.camera.update(deltatime);
+        self.world.look_at(self.camera.position());
+
         let collisions = self.tilemap_collider.get_collision_lines(player_rect);
         self.player.controller.collider_mut().resolve_collisions(&collisions);
         self.player.can_jump = false;
@@ -210,12 +224,6 @@ impl EventHandler for EzPlatform {
         }
         if player_rect.y > DISTANCE + 0.5 {
             self.player.controller.collider_mut().position_mut().y = -DISTANCE - 0.5;
-        }
-        if player_rect.x < -DISTANCE * 2.0 - 0.5 {
-            self.player.controller.collider_mut().position_mut().x = DISTANCE * 2.0 + 0.5;
-        }
-        if player_rect.x > DISTANCE * 2.0 + 0.5 {
-            self.player.controller.collider_mut().position_mut().x = -DISTANCE * 2.0 - 0.5;
         }
 
         self.player.animator.update(self.player.controller.collider().velocity(), deltatime);
@@ -310,7 +318,7 @@ fn generate_ground_template(width: u32, height: u32, start: (u32, u32), end: (u3
     floor = end.0 as i32;
     ciel = end.1 as i32;
     for row in 0..height {
-        if row < floor - 1 || row > ciel + 1 {
+        if row < floor || row > ciel {
             template[row as usize][(width - 1) as usize] = N;
         }
     }
