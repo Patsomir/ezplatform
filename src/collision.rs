@@ -107,13 +107,14 @@ impl TilemapCollider {
                 }
                 segment_right = col;
             } else {
-                if let Some(segment_left) = segment_left {
+                if let Some(segment_left_value) = segment_left {
                     result.push(self.segment_to_world(&TilemapSegment {
-                        left_bound: segment_left,
+                        left_bound: segment_left_value,
                         right_bound: segment_right,
                         bottom_bound: row,
                         top_bound: row,
                     }));
+                    segment_left = None;
                 };
             }
         }
