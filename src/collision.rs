@@ -247,11 +247,6 @@ impl DynamicCollider {
     }
 
     pub fn resolve_collision(&mut self, rect: &Rect) {
-        let self_rect = self.rect();
-        if !self_rect.overlaps(&rect) {
-            return;
-        }
-
         let collision_magnitude_x = 0.5 * (rect.w + self.width) - (self.position.x - rect.x).abs();
         let collision_magnitude_y = 0.5 * (rect.h + self.height) - (self.position.y - rect.y).abs();
         let trigger_magnitude = 0.00001;
