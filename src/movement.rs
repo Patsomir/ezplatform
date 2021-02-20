@@ -100,7 +100,7 @@ impl MovementController {
         if self.horizontal_force.abs() < 0.01
             || self.horizontal_force * self.body.velocity().x < 0.0
         {
-            if self.body.velocity().x.abs() < 0.01 {
+            if self.body.velocity().x.abs() < self.max_speed / 20.0 {
                 self.body.velocity_mut().x = 0.0;
             } else if self.body.velocity().x > 0.0 {
                 self.body.velocity_mut().x -= self.move_speed_decay * deltaseconds;

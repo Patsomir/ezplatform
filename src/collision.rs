@@ -182,7 +182,6 @@ pub struct DynamicCollider {
     width: f32,
     height: f32,
     velocity: Vector2<f32>,
-    acceleration: Vector2<f32>,
     force: Vector2<f32>,
     mass: f32,
 }
@@ -200,10 +199,6 @@ impl PhysicsObject for DynamicCollider {
         &mut self.velocity
     }
 
-    fn acceleration_mut(&mut self) -> &mut Vector2<f32> {
-        &mut self.acceleration
-    }
-
     fn position_mut(&mut self) -> &mut Point2<f32> {
         &mut self.position
     }
@@ -214,10 +209,6 @@ impl PhysicsObject for DynamicCollider {
 
     fn force(&self) -> Vector2<f32> {
         self.force
-    }
-
-    fn acceleration(&self) -> Vector2<f32> {
-        self.acceleration
     }
 
     fn velocity(&self) -> Vector2<f32> {
@@ -236,7 +227,6 @@ impl DynamicCollider {
             width: rect.w,
             height: rect.h,
             velocity: ZERO_VECTOR,
-            acceleration: ZERO_VECTOR,
             force: ZERO_VECTOR,
             mass,
         }
@@ -249,10 +239,9 @@ impl DynamicCollider {
     pub fn resolve_collision(&mut self, rect: &Rect) {
         let collision_magnitude_x = 0.5 * (rect.w + self.width) - (self.position.x - rect.x).abs();
         let collision_magnitude_y = 0.5 * (rect.h + self.height) - (self.position.y - rect.y).abs();
-        let trigger_magnitude = 0.00001;
 
         if collision_magnitude_x < collision_magnitude_y {
-            if collision_magnitude_x > trigger_magnitude {
+            if collision_magnitude_x > self.width / 100.0 {
                 self.velocity.x = 0.0;
                 if self.position.x > rect.x {
                     self.position.x = rect.x + 0.5 * rect.w + 0.5 * self.width;
@@ -261,7 +250,7 @@ impl DynamicCollider {
                 }
             }
         } else {
-            if collision_magnitude_y > trigger_magnitude {
+            if collision_magnitude_y > self.height / 100.0 {
                 self.velocity.y = 0.0;
                 if self.position.y > rect.y {
                     self.position.y = rect.y + 0.5 * rect.h + 0.5 * self.height;

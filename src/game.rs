@@ -38,11 +38,11 @@ const SPAWN_POSITION: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
 const MASS: f32 = 3.0;
 const PLAYER_WIDTH: f32 = 1.0;
 const PLAYER_HEIGHT: f32 = 1.0;
-const MOVE_FORCE: f32 = 1.2;
-const JUMP_IMPULSE: f32 = 0.15;
-const MAX_SPEED: f32 = 0.08;
-const MOVE_SPEED_DECAY: f32 = 0.9;
-const GRAVITY_ACCELERATION: f32 = 0.5;
+const MOVE_FORCE: f32 = 172.8;
+const JUMP_IMPULSE: f32 = 21.6;
+const MAX_SPEED: f32 = 11.52;
+const MOVE_SPEED_DECAY: f32 = 129.6;
+const GRAVITY_ACCELERATION: f32 = 72.0;
 const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[
     Vector2 { x: -0.98, y: -1.2 },
     Vector2 { x: 0.0, y: -1.2 },
@@ -143,12 +143,12 @@ impl Player {
             jump_animation,
             fall_animation,
         ]);
-        animator.add_rule(0, 1, |velocity| velocity.x.abs() > 0.01);
-        animator.add_rule(1, 0, |velocity| velocity.x.abs() < 0.01);
-        animator.add_rule(0, 2, |velocity| velocity.y > 0.01);
-        animator.add_rule(1, 2, |velocity| velocity.y > 0.01);
-        animator.add_rule(0, 2, |velocity| velocity.y < -0.01);
-        animator.add_rule(1, 2, |velocity| velocity.y < -0.01);
+        animator.add_rule(0, 1, |velocity| velocity.x.abs() > MAX_SPEED / 10.0);
+        animator.add_rule(1, 0, |velocity| velocity.x.abs() < MAX_SPEED / 10.0);
+        animator.add_rule(0, 2, |velocity| velocity.y > GRAVITY_ACCELERATION / 35.0);
+        animator.add_rule(1, 2, |velocity| velocity.y > GRAVITY_ACCELERATION / 35.0);
+        animator.add_rule(0, 3, |velocity| velocity.y < -GRAVITY_ACCELERATION / 35.0);
+        animator.add_rule(1, 3, |velocity| velocity.y < -GRAVITY_ACCELERATION / 35.0);
         animator.add_rule(2, 3, |velocity| velocity.y <= 0.0);
         animator.add_rule(3, 0, |velocity| velocity.y >= 0.0);
 
