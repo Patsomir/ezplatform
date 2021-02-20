@@ -64,4 +64,24 @@ impl World {
     pub fn camera_position(&self) -> Point2<f32> {
         self.camera_position
     }
+
+    pub fn width(&self) -> f32 {
+        self.width
+    }
+
+    pub fn height(&self) -> f32 {
+        self.height
+    }
+
+    pub fn screen_width(&self) -> f32 {
+        self.screen_width
+    }
+
+    pub fn screen_height(&self) -> f32 {
+        self.screen_height
+    }
+
+    pub fn distance(&self) -> f32 {
+        self.distance
+    }
 }
