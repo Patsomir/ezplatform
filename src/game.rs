@@ -1,6 +1,7 @@
 use std::collections::{HashMap, VecDeque};
 
 use ggez::{
+    audio::{SoundSource, Source},
     event::{EventHandler, KeyCode, KeyMods},
     graphics::{self, Color, FilterMode, Image, Rect},
     input::keyboard,
@@ -30,6 +31,7 @@ const PLAYER_JUMP: &'static str = "/jump.png";
 const PLAYER_FALL: &'static str = "/fall.png";
 const PLAYER_WALK: &'static str = "/walking.png";
 const GROUND_TILES: &'static str = "/ground.png";
+const JUMP_SOUND: &'static str = "/jump.wav";
 
 // Player params
 const SPAWN_POSITION: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
@@ -85,6 +87,7 @@ struct Player {
     controller: MovementController,
     orientation: i8,
     can_jump: bool,
+    jump_sound: Source,
 }
 
 impl Player {
@@ -140,11 +143,15 @@ impl Player {
         animator.add_rule(2, 3, |velocity| velocity.y <= 0.0);
         animator.add_rule(3, 0, |velocity| velocity.y >= 0.0);
 
+        let jump_sound =
+            Source::new(ctx, JUMP_SOUND).expect(&format!("Failed to load {}", JUMP_SOUND));
+
         Self {
             controller,
             animator,
             orientation: 1,
             can_jump: false,
+            jump_sound,
         }
     }
 
@@ -330,6 +337,9 @@ impl EventHandler for EzPlatform {
     ) {
         if self.player.can_jump && keycode == JUMP_KEY {
             self.player.controller.jump();
+            if let Err(_) = self.player.jump_sound.play() {
+                println!("Failed to play sound");
+            }
             self.player.can_jump = false;
         }
     }
