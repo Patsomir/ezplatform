@@ -36,14 +36,18 @@ const JUMP_SOUND: &'static str = "/jump.wav";
 // Player params
 const SPAWN_POSITION: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
 const MASS: f32 = 3.0;
-const SIZE: f32 = 1.0;
+const PLAYER_WIDTH: f32 = 1.0;
+const PLAYER_HEIGHT: f32 = 1.0;
 const MOVE_FORCE: f32 = 1.2;
 const JUMP_IMPULSE: f32 = 0.15;
 const MAX_SPEED: f32 = 0.08;
 const MOVE_SPEED_DECAY: f32 = 0.9;
 const GRAVITY_ACCELERATION: f32 = 0.5;
-const GROUND_CHECK_OFFSETS: &[Vector2<f32>] =
-    &[Vector2 { x: -0.95, y: -1.2 }, Vector2 { x: 0.0, y: -1.2 }, Vector2 { x: 0.95, y: -1.2 }];
+const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[
+    Vector2 { x: -0.98, y: -1.2 },
+    Vector2 { x: 0.0, y: -1.2 },
+    Vector2 { x: 0.98, y: -1.2 },
+];
 
 // Cave params
 const TEMPLATE_WIDTH: u32 = 31;
@@ -94,7 +98,12 @@ impl Player {
     fn new(ctx: &mut Context) -> Self {
         // Controller init
         let body = DynamicCollider::from_rect(
-            Rect::new(SPAWN_POSITION.x, SPAWN_POSITION.y, 0.98 * SIZE, SIZE),
+            Rect::new(
+                SPAWN_POSITION.x,
+                SPAWN_POSITION.y,
+                0.98 * PLAYER_WIDTH,
+                PLAYER_HEIGHT,
+            ),
             MASS,
         );
         let controller = MovementController::from_components(
@@ -162,8 +171,8 @@ impl Player {
             Rect::new(
                 self.controller.collider().position().x,
                 self.controller.collider().position().y,
-                self.orientation as f32 * SIZE,
-                SIZE,
+                self.orientation as f32 * PLAYER_WIDTH,
+                PLAYER_HEIGHT,
             ),
         )
     }
@@ -308,7 +317,7 @@ pub struct EzPlatform {
 impl EzPlatform {
     pub fn new(ctx: &mut Context) -> EzPlatform {
         let player = Player::new(ctx);
-        
+
         let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
 
         let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
