@@ -9,15 +9,15 @@ const DELTA: f32 = 0.00001;
 #[test]
 fn test_tilemap_collider_template_creation() {
     let collider = TilemapCollider::from_template(&[
-        &[false, false,  true],
-        &[false,  true,  true],
-        &[ true,  true,  true],
+        &[false, false, true],
+        &[false, true, true],
+        &[true, true, true],
     ]);
 
     let expected = vec![
-        vec![ true,  true,  true],
-        vec![false,  true,  true],
-        vec![false, false,  true],
+        vec![true, true, true],
+        vec![false, true, true],
+        vec![false, false, true],
     ];
 
     assert_eq!(expected, *collider.tiles_ref());
@@ -26,9 +26,9 @@ fn test_tilemap_collider_template_creation() {
 #[test]
 fn test_tilemap_collider_get_collision_tiles() {
     let collider = TilemapCollider::from_template(&[
-        &[false, false,  true],
-        &[false,  true,  true],
-        &[ true,  true,  true],
+        &[false, false, true],
+        &[false, true, true],
+        &[true, true, true],
     ]);
 
     let rect = Rect::new(0.0, 0.0, 0.0, 0.0);
@@ -61,9 +61,9 @@ fn test_tilemap_collider_get_collision_tiles() {
 #[test]
 fn test_tilemap_collider_get_collision_lines() {
     let collider = TilemapCollider::from_template(&[
-        &[false, false,  true],
-        &[false,  true,  true],
-        &[ true,  true,  true],
+        &[false, false, true],
+        &[false, true, true],
+        &[true, true, true],
     ]);
 
     let rect = Rect::new(1.0, 1.0, 3.0, 0.5);
@@ -79,7 +79,7 @@ fn test_tilemap_collider_get_collision_lines() {
 
     let rect = Rect::new(0.0, 1.0, 0.5, 0.5);
     assert_eq!(0, collider.get_collision_lines(rect).len());
-    
+
     let rect = Rect::new(-1.0, 1.0, 0.5, 3.0);
     assert_eq!(0, collider.get_collision_lines(rect).len());
 
@@ -93,9 +93,9 @@ fn test_tilemap_collider_get_collision_lines() {
 #[test]
 fn test_tilemap_collider_check_collision() {
     let collider = TilemapCollider::from_template(&[
-        &[false, false,  true],
-        &[false,  true,  true],
-        &[ true,  true,  true],
+        &[false, false, true],
+        &[false, true, true],
+        &[true, true, true],
     ]);
 
     let point = Point2 { x: 0.0, y: 0.0 };
@@ -119,10 +119,7 @@ fn test_tilemap_collider_check_collision() {
 
 #[test]
 fn test_new_dynamic_collider() {
-    let collider = DynamicCollider::from_rect(
-        Rect::new(1.0, 1.0, 2.0, 3.0),
-        1.0
-    );
+    let collider = DynamicCollider::from_rect(Rect::new(1.0, 1.0, 2.0, 3.0), 1.0);
 
     assert_eq_point!(Point2 { x: 1.0, y: 1.0 }, collider.position(), DELTA);
     assert_eq_point!(Point2 { x: 0.0, y: 0.0 }, collider.velocity(), DELTA);
@@ -136,10 +133,7 @@ fn test_new_dynamic_collider() {
 #[test]
 fn test_dynamic_collider_resolve_collision_no_contact() {
     let initial_rect = Rect::new(1.0, 1.0, 2.0, 3.0);
-    let mut collider = DynamicCollider::from_rect(
-        initial_rect,
-        1.0
-    );
+    let mut collider = DynamicCollider::from_rect(initial_rect, 1.0);
 
     let obstacle = Rect::new(-1.0, 1.0, 1.0, 1.0);
     collider.resolve_collision(&obstacle);
@@ -160,10 +154,7 @@ fn test_dynamic_collider_resolve_collision_no_contact() {
 
 #[test]
 fn test_dynamic_collider_resolve_collision_with_contact() {
-    let mut collider = DynamicCollider::from_rect(
-        Rect::new(1.0, 1.0, 2.0, 3.0),
-        1.0
-    );
+    let mut collider = DynamicCollider::from_rect(Rect::new(1.0, 1.0, 2.0, 3.0), 1.0);
 
     let obstacle = Rect::new(0.0, 1.0, 1.0, 1.0);
     let expected = Rect::new(1.5, 1.0, 2.0, 3.0);

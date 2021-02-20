@@ -121,5 +121,12 @@ fn test_accelerating_movement_update() {
 
     point.update(Duration::from_secs_f32(0.5));
     assert_eq_point!(Point2 { x: 0.75, y: 0.75 }, point.velocity(), DELTA);
-    assert_eq_point!(Point2 { x: 0.5625, y: 0.5625 }, point.position(), DELTA);
+    assert_eq_point!(
+        Point2 {
+            x: 0.5625,
+            y: 0.5625
+        },
+        point.position(),
+        DELTA
+    );
 }
