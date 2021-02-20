@@ -22,16 +22,15 @@ pub trait Tilemap {
     }
 
     fn rect_overlap(&self, rect: Rect) -> TilemapSegment {
-        let local_x = rect.x / self.tile_width() + self.origin().x as f32;
-        let local_y = rect.y / self.tile_height() + self.origin().y as f32;
+        let local_point = self.world_to_tilemap(rect.point());
         let half_local_w = 0.5 * rect.w / self.tile_width();
         let half_local_h = 0.5 * rect.h / self.tile_height();
 
         TilemapSegment {
-            left_bound: (local_x - half_local_w).round() as i32,
-            right_bound: (local_x + half_local_w).round() as i32,
-            bottom_bound: (local_y - half_local_h).round() as i32,
-            top_bound: (local_y + half_local_h).round() as i32,
+            left_bound: (local_point.x - half_local_w).round() as i32,
+            right_bound: (local_point.x + half_local_w).round() as i32,
+            bottom_bound: (local_point.y - half_local_h).round() as i32,
+            top_bound: (local_point.y + half_local_h).round() as i32,
         }
     }
 

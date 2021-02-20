@@ -1,6 +1,9 @@
 use ezplatform::world::*;
 use ggez::{graphics::Rect, mint::Point2};
 
+#[macro_use]
+mod float_asserts;
+
 const DELTA: f32 = 0.00001;
 
 struct WorldParams {
@@ -10,31 +13,6 @@ struct WorldParams {
     height: f32,
     distance: f32,
     camera_position: Point2<f32>,
-}
-
-macro_rules! assert_eq_float {
-    ($expected:expr , $actual:expr, $delta: expr) => {
-        assert!(
-            ($expected - $actual).abs() < $delta,
-            format!("expected: {}, actual: {}", $expected, $actual)
-        );
-    };
-}
-
-macro_rules! assert_eq_point {
-    ($expected:expr , $actual:expr, $delta: expr) => {
-        assert_eq_float!($expected.x, $actual.x, $delta);
-        assert_eq_float!($expected.y, $actual.y, $delta);
-    };
-}
-
-macro_rules! assert_eq_rect {
-    ($expected:expr , $actual:expr, $delta: expr) => {
-        assert_eq_float!($expected.x, $actual.x, $delta);
-        assert_eq_float!($expected.y, $actual.y, $delta);
-        assert_eq_float!($expected.w, $actual.w, $delta);
-        assert_eq_float!($expected.h, $actual.h, $delta);
-    };
 }
 
 macro_rules! assert_world_params {
