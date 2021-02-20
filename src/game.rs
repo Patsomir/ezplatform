@@ -43,7 +43,7 @@ const MAX_SPEED: f32 = 0.08;
 const MOVE_SPEED_DECAY: f32 = 0.9;
 const GRAVITY_ACCELERATION: f32 = 0.5;
 const GROUND_CHECK_OFFSETS: &[Vector2<f32>] =
-    &[Vector2 { x: -0.95, y: -1.2 }, Vector2 { x: 0.95, y: -1.2 }];
+    &[Vector2 { x: -0.95, y: -1.2 }, Vector2 { x: 0.0, y: -1.2 }, Vector2 { x: 0.95, y: -1.2 }];
 
 // Cave params
 const TEMPLATE_WIDTH: u32 = 31;
@@ -182,7 +182,7 @@ impl TilemapCave {
         let tile_hashmap = tile_hashmap();
 
         let mut ground_image =
-            Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
+            Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", GROUND_TILES));
         ground_image.set_filter(FilterMode::Nearest);
 
         let tilemap_renderers: VecDeque<_> = (-1..=1)
@@ -308,13 +308,11 @@ pub struct EzPlatform {
 impl EzPlatform {
     pub fn new(ctx: &mut Context) -> EzPlatform {
         let player = Player::new(ctx);
+        
         let world: World = World::new(SCREEN_WIDTH, SCREEN_HEIGHT, DISTANCE);
+
         let mut camera = SmoothCamera::new(world.camera_position(), CAMERA_SMOOTHNESS);
         camera.set_follow_direction(FollowDirection::Horizontal);
-
-        let mut ground_image =
-            Image::new(ctx, GROUND_TILES).expect(&format!("Failed to load {}", PLAYER_WALK));
-        ground_image.set_filter(FilterMode::Nearest);
 
         let cave = TilemapCave::new(ctx);
 
