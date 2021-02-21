@@ -34,7 +34,7 @@ const GROUND_TILES: &'static str = "/ground.png";
 const JUMP_SOUND: &'static str = "/jump.wav";
 
 // Player params
-const SPAWN_POSITION: Point2<f32> = Point2 { x: 0.0, y: 0.0 };
+const SPAWN_POSITION: Point2<f32> = Point2 { x: 0.0, y: 0.5 };
 const MASS: f32 = 3.0;
 const PLAYER_WIDTH: f32 = 1.0;
 const PLAYER_HEIGHT: f32 = 1.0;
