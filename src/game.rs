@@ -21,9 +21,9 @@ use crate::{
 };
 
 // Controls
-const LEFT_KEY: KeyCode = KeyCode::A;
-const RIGHT_KEY: KeyCode = KeyCode::D;
-const JUMP_KEY: KeyCode = KeyCode::W;
+const LEFT_KEY: KeyCode = KeyCode::Left;
+const RIGHT_KEY: KeyCode = KeyCode::Right;
+const JUMP_KEY: KeyCode = KeyCode::Z;
 const QUIT_KEY: KeyCode = KeyCode::Escape;
 
 // Asset paths
@@ -49,6 +49,7 @@ const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[
     Vector2 { x: 0.0, y: -1.2 },
     Vector2 { x: 0.98, y: -1.2 },
 ];
+const MIDAIR_JUMPS: u32 = 1;
 
 // Cave params
 const TEMPLATE_WIDTH: u32 = 31;
@@ -92,6 +93,7 @@ struct Player {
     controller: MovementController,
     orientation: i8,
     can_jump: bool,
+    midair_jumps_left: u32,
     jump_sound: Source,
 }
 
@@ -161,6 +163,7 @@ impl Player {
             animator,
             orientation: 1,
             can_jump: false,
+            midair_jumps_left: 0,
             jump_sound,
         }
     }
@@ -345,12 +348,17 @@ impl EventHandler for EzPlatform {
     ) {
         match keycode {
             JUMP_KEY => {
-                if self.player.can_jump {
+                if self.player.can_jump || self.player.midair_jumps_left > 0 {
                     self.player.controller.jump();
                     if let Err(_) = self.player.jump_sound.play() {
                         println!("Failed to play sound");
                     }
-                    self.player.can_jump = false;
+
+                    if self.player.can_jump {
+                        self.player.can_jump = false;
+                    } else {
+                        self.player.midair_jumps_left -= 1;
+                    }
                 }
             }
             QUIT_KEY => ggez::event::quit(ctx),
@@ -398,6 +406,7 @@ impl EventHandler for EzPlatform {
         for point in self.player.controller.ground_check_points().iter() {
             if self.cave.check_collision(*point) {
                 self.player.can_jump = true;
+                self.player.midair_jumps_left = MIDAIR_JUMPS;
                 break;
             }
         }
