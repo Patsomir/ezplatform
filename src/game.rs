@@ -43,6 +43,7 @@ const MOVE_FORCE: f32 = 172.8;
 const JUMP_IMPULSE: f32 = 21.6;
 const MAX_SPEED: f32 = 11.52;
 const MOVE_SPEED_DECAY: f32 = 129.6;
+const JUMP_DECAY: f32 = 40.0;
 const GRAVITY_ACCELERATION: f32 = 72.0;
 const GROUND_CHECK_OFFSETS: &[Vector2<f32>] = &[
     Vector2 { x: -0.98, y: -1.2 },
@@ -163,7 +164,7 @@ impl Player {
             animator,
             orientation: 1,
             can_jump: false,
-            midair_jumps_left: 0,
+            midair_jumps_left: MIDAIR_JUMPS,
             jump_sound,
         }
     }
@@ -344,8 +345,11 @@ impl EventHandler for EzPlatform {
         ctx: &mut Context,
         keycode: KeyCode,
         _keymods: KeyMods,
-        _repeat: bool,
+        repeat: bool,
     ) {
+        if repeat {
+            return;
+        }
         match keycode {
             JUMP_KEY => {
                 if self.player.can_jump || self.player.midair_jumps_left > 0 {
@@ -376,6 +380,12 @@ impl EventHandler for EzPlatform {
             self.player.orientation = 1;
         } else {
             self.player.controller.stop();
+        }
+        if !keyboard::is_key_pressed(ctx, JUMP_KEY) {
+            let velocity = self.player.controller.collider_mut().velocity_mut();
+            if velocity.y > 0.0 {
+                velocity.y -= JUMP_DECAY * velocity.y * deltatime.as_secs_f32();
+            }
         }
         self.player.controller.update(deltatime);
 
