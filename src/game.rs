@@ -24,6 +24,7 @@ use crate::{
 const LEFT_KEY: KeyCode = KeyCode::A;
 const RIGHT_KEY: KeyCode = KeyCode::D;
 const JUMP_KEY: KeyCode = KeyCode::W;
+const QUIT_KEY: KeyCode = KeyCode::Escape;
 
 // Asset paths
 const PLAYER_IDLE: &'static str = "/placeholder.png";
@@ -337,17 +338,23 @@ impl EzPlatform {
 impl EventHandler for EzPlatform {
     fn key_down_event(
         &mut self,
-        _ctx: &mut Context,
+        ctx: &mut Context,
         keycode: KeyCode,
         _keymods: KeyMods,
         _repeat: bool,
     ) {
-        if self.player.can_jump && keycode == JUMP_KEY {
-            self.player.controller.jump();
-            if let Err(_) = self.player.jump_sound.play() {
-                println!("Failed to play sound");
+        match keycode {
+            JUMP_KEY => {
+                if self.player.can_jump {
+                    self.player.controller.jump();
+                    if let Err(_) = self.player.jump_sound.play() {
+                        println!("Failed to play sound");
+                    }
+                    self.player.can_jump = false;
+                }
             }
-            self.player.can_jump = false;
+            QUIT_KEY => ggez::event::quit(ctx),
+            _ => (),
         }
     }
 
